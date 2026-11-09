@@ -107,6 +107,7 @@
       />
 
       <button id="btnPlayNow" class="btn-play-giant">▶ PLAY NOW!</button>
+      <button id="btnParents" class="parents-link">👪 Parents</button>
     </div>
   </div>
 
@@ -167,6 +168,17 @@
       <button id="btnContinueFromChest" class="btn-play-giant hidden" style="margin-top:8px;padding:14px;font-size:1.35rem;">
         🚀 AWESOME! NEXT QUEST
       </button>
+    </div>
+  </div>
+
+  <!-- PARENT DASHBOARD (PIN-locked, data stays on this device) -->
+  <div id="parentOverlay" class="overlay-screen hidden">
+    <div class="menu-card parent-card">
+      <div class="menu-tabs">
+        <div class="parent-title">👪 Parent Dashboard</div>
+        <button id="parentClose" class="menu-close" aria-label="Close">✖</button>
+      </div>
+      <div id="parentBody" class="menu-body"></div>
     </div>
   </div>
 

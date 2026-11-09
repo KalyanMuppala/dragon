@@ -234,6 +234,25 @@ function createEnglishChallenge() {
   };
 }
 
+// Skill category + subject for the parent dashboard (matched on the topic badge text)
+function challengeInfo(topic) {
+  const t = [
+    ['POWER ARRAY', 'Multiplication', 'Math'], ['BALANCE SCALE', 'Algebra (find the unknown)', 'Math'],
+    ['POTION', 'Fractions', 'Math'], ['BLUEPRINT', 'Area & Geometry', 'Math'],
+    ['THERMAL', 'Science: states of matter', 'Science'], ['CIRCUIT', 'Science: circuits', 'Science'],
+    ['SYNONYMS', 'Vocabulary: synonyms', 'English'], ['OPPOSITE', 'Vocabulary: opposites', 'English'],
+    ['SPELLING', 'Spelling', 'English'], ['PLURAL', 'Grammar: plurals', 'English'],
+    ['WORD TYPE', 'Grammar: parts of speech', 'English'], ['FILL THE GAP', 'Grammar: usage', 'English'],
+    ['RHYME', 'Phonics: rhymes', 'English']
+  ];
+  const hit = t.find(x => (topic || '').toUpperCase().includes(x[0]));
+  return hit ? [hit[1], hit[2]] : ['Other', 'Math'];
+}
+
+function dayKey(d = new Date()) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 function createVisualSTEMChallenge(level = 1, focus = 'mixed') {
   // focus: 'english' = all English, 'math' = no English, 'mixed' = ~40% English
   if (focus === 'english' || (focus !== 'math' && Math.random() < 0.4)) return createEnglishChallenge();
@@ -518,6 +537,7 @@ class DragonCraftWorld {
       if (raw) {
         const saved = JSON.parse(raw);
         const st = Object.assign(this.defaultSave(), saved);
+        if (!saved.stats) st.stats = this.defaultSave().stats;
         if (!Array.isArray(saved.squad)) st.squad = []; // old save: rebuild from owned dragons
         return this.fixSquad(st);
       }
@@ -553,6 +573,7 @@ class DragonCraftWorld {
       dragons: ['ignis'],
       activeDragonIdx: 0,
       gear: [], // 'crown_gold', 'wings_aether', 'staff_nether', 'pet_star'
+      stats: { sessions: 0, totalMs: 0, byCat: {}, daily: {}, log: [], firstPlayed: Date.now() },
       goalProgress: 0, // progress through this island's mini-goal
       squad: ['ignis'], // up to 3 equipped dragons that follow you; squad[0] is the lead
       character: 0,
@@ -776,7 +797,199 @@ class DragonCraftWorld {
     previews.forEach(fn => fn());
   }
 
+  // ==========================================================================
+  // PARENT DASHBOARD: real on-device tracking (no data leaves this iPad)
+  // ==========================================================================
+  recordAnswer() {
+    const st = this.state.stats;
+    const ch = this.activeChallenge;
+    if (!st || !ch) return;
+    const ms = Math.min(120000, performance.now() - (this.qStart || performance.now()));
+    const wrong = this.qWrong || 0;
+    const c = st.byCat[ch.cat] || (st.byCat[ch.cat] = { subj: ch.subj, asked: 0, first: 0, tries: 0, ms: 0 });
+    c.subj = ch.subj; c.asked++; c.tries += wrong + 1; c.ms += ms; if (wrong === 0) c.first++;
+    const d = st.daily[dayKey()] || (st.daily[dayKey()] = { ms: 0, q: 0, first: 0 });
+    d.q++; if (wrong === 0) d.first++;
+    st.log.push({ t: Date.now(), cat: ch.cat, subj: ch.subj, tries: wrong + 1, ms: Math.round(ms), island: this.state.islandIndex + 1 });
+    if (st.log.length > 300) st.log.shift();
+    this.save();
+  }
+
+  startTimeTracking() {
+    setInterval(() => {
+      const hidden = id => document.getElementById(id).classList.contains('hidden');
+      if (document.visibilityState !== 'visible' || !hidden('parentOverlay') || !hidden('titleOverlay')) return;
+      const st = this.state.stats;
+      st.totalMs += 5000;
+      (st.daily[dayKey()] || (st.daily[dayKey()] = { ms: 0, q: 0, first: 0 })).ms += 5000;
+      this.save();
+    }, 5000);
+  }
+
+  pinKey() { return 'dragoncraft_parent_pin_v1'; }
+  getPin() { try { return localStorage.getItem(this.pinKey()); } catch (e) { return null; } }
+  setPin(p) { try { localStorage.setItem(this.pinKey(), btoa('dc:' + p)); } catch (e) {} }
+  checkPin(p) { return this.getPin() === btoa('dc:' + p); }
+
+  openParent() {
+    document.getElementById('parentOverlay').classList.remove('hidden');
+    this.parentView = this.getPin() ? 'login' : 'setup';
+    this.renderParent();
+  }
+
+  renderParent() {
+    const body = document.getElementById('parentBody');
+    if (this.parentView === 'setup' || this.parentView === 'login') {
+      const setup = this.parentView === 'setup';
+      body.innerHTML = `<div class="pd-center">
+        <div class="menu-note">${setup ? 'Create a 4-digit Parent PIN. You will need it to see the dashboard.' : 'Enter your 4-digit Parent PIN'}</div>
+        <input id="pdPin" class="pd-pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" />
+        <div class="pd-actions" style="justify-content:center"><button id="pdGo" class="pd-btn">${setup ? 'Save PIN' : 'Unlock'}</button></div>
+        <div id="pdMsg" class="menu-note" style="margin-top:12px;color:#ef476f"></div>
+        <div class="menu-note" style="font-size:.75rem;margin-top:14px">This is a casual kid-lock, not bank-grade security. Data is stored only on this device.</div></div>`;
+      const go = () => {
+        const v = document.getElementById('pdPin').value.trim();
+        if (!/^\d{4}$/.test(v)) { document.getElementById('pdMsg').textContent = 'Please enter exactly 4 digits.'; return; }
+        if (setup) { this.setPin(v); this.parentView = 'dash'; this.renderParent(); }
+        else if (this.checkPin(v)) { this.parentView = 'dash'; this.renderParent(); }
+        else { document.getElementById('pdMsg').textContent = 'Wrong PIN.'; document.getElementById('pdPin').value = ''; }
+      };
+      document.getElementById('pdGo').addEventListener('click', go);
+      document.getElementById('pdPin').addEventListener('keydown', e => { if (e.key === 'Enter') go(); });
+      return;
+    }
+    body.innerHTML = this.parentDashboardHTML();
+    document.getElementById('pdCsv').addEventListener('click', () => this.downloadFile('dragoncraft-answers.csv', this.buildCsv(), 'text/csv'));
+    document.getElementById('pdJson').addEventListener('click', () => this.downloadFile('dragoncraft-report.json', JSON.stringify({ exportedAt: new Date().toISOString(), state: this.state }, null, 2), 'application/json'));
+    document.getElementById('pdCopy').addEventListener('click', async () => {
+      const txt = this.buildSummaryText();
+      try { await navigator.clipboard.writeText(txt); document.getElementById('pdCopy').textContent = '✅ Copied!'; }
+      catch (e) { document.getElementById('pdCopy').textContent = 'Copy not allowed here'; }
+    });
+    document.getElementById('pdPinChange').addEventListener('click', () => { this.parentView = 'setup'; this.renderParent(); });
+    document.getElementById('pdReset').addEventListener('click', () => {
+      if (confirm('Erase ALL game progress and parent stats on this device? This cannot be undone.')) {
+        try { localStorage.removeItem(SAVE_KEY); } catch (e) {}
+        location.reload();
+      }
+    });
+  }
+
+  fmtMin(ms) {
+    const m = Math.round(ms / 60000);
+    if (ms > 0 && m === 0) return '<1 min';
+    return m >= 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `${m} min`;
+  }
+
+  parentStats() {
+    const st = this.state.stats;
+    const cats = Object.entries(st.byCat).map(([name, c]) => ({ name, ...c, pct: c.asked ? Math.round((c.first / c.asked) * 100) : 0, avgS: c.asked ? c.ms / c.asked / 1000 : 0 }));
+    const asked = cats.reduce((a, c) => a + c.asked, 0);
+    const first = cats.reduce((a, c) => a + c.first, 0);
+    const ms = cats.reduce((a, c) => a + c.ms, 0);
+    const days = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(); d.setDate(d.getDate() - i);
+      const rec = st.daily[dayKey(d)] || { ms: 0, q: 0, first: 0 };
+      days.push({ label: d.toLocaleDateString(undefined, { weekday: 'short' }), ...rec });
+    }
+    return { cats, asked, first, pct: asked ? Math.round((first / asked) * 100) : 0, avgS: asked ? ms / asked / 1000 : 0, days, week: days.reduce((a, d) => a + d.ms, 0), today: days[6].ms };
+  }
+
+  statusOf(c) {
+    if (c.asked < 5) return ['Not enough data yet', 'pd-ok', '#8ea0d6'];
+    if (c.pct >= 85) return ['Strong', 'pd-good', '#06d6a0'];
+    if (c.pct >= 65) return ['Doing OK', 'pd-ok', '#ffd166'];
+    return ['Needs practice', 'pd-bad', '#ef476f'];
+  }
+
+  parentDashboardHTML() {
+    const S = this.parentStats();
+    const st = this.state.stats;
+    const subjects = ['Math', 'Science', 'English'].map(sub => {
+      const cs = S.cats.filter(c => c.subj === sub);
+      const a = cs.reduce((x, c) => x + c.asked, 0), f = cs.reduce((x, c) => x + c.first, 0);
+      return { sub, a, pct: a ? Math.round((f / a) * 100) : 0 };
+    });
+    const maxMs = Math.max(60000, ...S.days.map(d => d.ms));
+    const ranked = S.cats.filter(c => c.asked >= 5).sort((a, b) => a.pct - b.pct);
+    const tips = [];
+    if (ranked.length) {
+      ranked.slice(0, 2).filter(c => c.pct < 85).forEach(c => tips.push(`Practice <b>${c.name}</b> together — first-try accuracy is ${c.pct}%.`));
+      const best = ranked[ranked.length - 1]; if (best.pct >= 85) tips.push(`Praise <b>${best.name}</b> — a real strength (${best.pct}% first try).`);
+    } else tips.push('Play a few more rounds — tips appear after 5 questions in a skill.');
+    const slow = S.cats.filter(c => c.asked >= 5).sort((a, b) => b.avgS - a.avgS)[0];
+    if (slow && slow.avgS > 25) tips.push(`<b>${slow.name}</b> takes the longest (~${Math.round(slow.avgS)}s per question) — a good topic to work through on paper.`);
+    if (S.week > 0) tips.push(`Average play this week: ${this.fmtMin(S.week / 7)} per day.`);
+    const rec = st.log.slice(-12).reverse();
+    return `
+      <div class="pd-cards">
+        <div class="pd-card"><b>${this.fmtMin(S.today)}</b><span>Played today</span></div>
+        <div class="pd-card"><b>${this.fmtMin(S.week)}</b><span>Last 7 days</span></div>
+        <div class="pd-card"><b>${this.fmtMin(st.totalMs)}</b><span>Total play time</span></div>
+        <div class="pd-card"><b>${S.asked}</b><span>Questions answered</span></div>
+        <div class="pd-card"><b>${S.pct}%</b><span>Right on first try</span></div>
+        <div class="pd-card"><b>${S.avgS ? S.avgS.toFixed(1) + 's' : '–'}</b><span>Avg time / question</span></div>
+        <div class="pd-card"><b>${st.sessions || 0}</b><span>Play sessions</span></div>
+      </div>
+      <div class="pd-sec">📅 Play time — last 7 days</div>
+      <div class="pd-chart">${S.days.map(d => `<div class="pd-col"><span>${Math.round(d.ms / 60000)}m</span><i style="height:${Math.round((d.ms / maxMs) * 70)}px"></i>${d.label}</div>`).join('')}</div>
+      <div class="pd-sec">📚 By subject (first-try accuracy)</div>
+      <table class="pd-table"><tr><th>Subject</th><th>Questions</th><th>Accuracy</th><th></th></tr>
+      ${subjects.map(x => `<tr><td>${x.sub}</td><td>${x.a}</td><td>${x.a ? x.pct + '%' : '–'}</td><td><div class="pd-bar"><i style="width:${x.pct}%;background:#06d6a0"></i></div></td></tr>`).join('')}</table>
+      <div class="pd-sec">🎯 Skills</div>
+      <table class="pd-table"><tr><th>Skill</th><th>Qs</th><th>First try</th><th>Avg time</th><th>Status</th></tr>
+      ${S.cats.length ? S.cats.sort((a, b) => a.name.localeCompare(b.name)).map(c => { const [lab, cls, col] = this.statusOf(c); return `<tr><td>${c.name}</td><td>${c.asked}</td><td>${c.pct}% <div class="pd-bar"><i style="width:${c.pct}%;background:${col}"></i></div></td><td>${c.avgS.toFixed(1)}s</td><td class="${cls}">${lab}</td></tr>`; }).join('') : '<tr><td colspan="5">No questions answered yet.</td></tr>'}</table>
+      <div class="pd-sec">💡 What to do next</div>
+      <ul class="pd-list">${tips.map(t => `<li>${t}</li>`).join('')}</ul>
+      <div class="pd-sec">🎮 Game progress</div>
+      <div class="pd-cards">
+        <div class="pd-card"><b>${this.state.level}</b><span>Hero level</span></div>
+        <div class="pd-card"><b>${Math.min(this.state.maxIsland + 1, BIOMES.length)} / ${BIOMES.length}</b><span>Islands reached</span></div>
+        <div class="pd-card"><b>${this.state.dragons.length} / ${DRAGONS.length}</b><span>Dragons tamed</span></div>
+        <div class="pd-card"><b>${this.state.gear.length} / ${SURPRISES.length}</b><span>Treasures found</span></div>
+      </div>
+      <div class="pd-sec">🕒 Recent questions</div>
+      <table class="pd-table"><tr><th>When</th><th>Skill</th><th>Tries</th><th>Time</th></tr>
+      ${rec.length ? rec.map(r => `<tr><td>${new Date(r.t).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</td><td>${r.cat}</td><td class="${r.tries === 1 ? 'pd-good' : 'pd-bad'}">${r.tries === 1 ? '✔ first try' : r.tries + ' tries'}</td><td>${(r.ms / 1000).toFixed(1)}s</td></tr>`).join('') : '<tr><td colspan="4">Nothing yet.</td></tr>'}</table>
+      <div class="pd-sec">ℹ️ About comparisons (IQ, India, USA)</div>
+      <div class="pd-note">This is a learning game, <b>not an IQ test</b>. It has no official national norms, so it cannot honestly say how your child ranks against other children in India or in a US state — any such number would be invented. Use the skill accuracy above to see strengths and gaps. For a real, normed comparison, ask the school for standardized results (for example NWEA MAP Growth or state tests in the USA; NCERT/NAS-style assessments or school exams in India) or a qualified child psychologist for an IQ assessment.</div>
+      <div class="pd-actions">
+        <button id="pdCopy" class="pd-btn">📋 Copy summary</button>
+        <button id="pdCsv" class="pd-btn">⬇️ Answers (CSV)</button>
+        <button id="pdJson" class="pd-btn">⬇️ Full data (JSON)</button>
+        <button id="pdPinChange" class="pd-btn">🔑 Change PIN</button>
+        <button id="pdReset" class="pd-btn danger">🗑️ Erase all data</button>
+      </div>`;
+  }
+
+  buildSummaryText() {
+    const S = this.parentStats();
+    const lines = [`DragonCraft report — ${this.state.name} — ${new Date().toLocaleDateString()}`,
+      `Play time: today ${this.fmtMin(S.today)}, 7 days ${this.fmtMin(S.week)}, total ${this.fmtMin(this.state.stats.totalMs)}`,
+      `Questions: ${S.asked}, right on first try: ${S.pct}%, avg ${S.avgS.toFixed(1)}s each`,
+      `Progress: level ${this.state.level}, islands ${Math.min(this.state.maxIsland + 1, BIOMES.length)}/${BIOMES.length}, dragons ${this.state.dragons.length}/${DRAGONS.length}`, 'Skills:'];
+    S.cats.forEach(c => lines.push(`  - ${c.name}: ${c.pct}% first try (${c.asked} qs, ${c.avgS.toFixed(1)}s avg) — ${this.statusOf(c)[0]}`));
+    return lines.join('\n');
+  }
+
+  buildCsv() {
+    const rows = [['time', 'subject', 'skill', 'tries', 'seconds', 'island']];
+    this.state.stats.log.forEach(r => rows.push([new Date(r.t).toISOString(), r.subj, `"${r.cat}"`, r.tries, (r.ms / 1000).toFixed(1), r.island]));
+    return rows.map(r => r.join(',')).join('\n');
+  }
+
+  downloadFile(name, text, type) {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([text], { type }));
+    a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+  }
+
   bindEvents() {
+    document.getElementById('btnParents').addEventListener('click', () => this.openParent());
+    document.getElementById('parentClose').addEventListener('click', () => document.getElementById('parentOverlay').classList.add('hidden'));
+    this.startTimeTracking();
     // ---- Side menu (Hero / Dragon Book / Islands) ----
     document.querySelectorAll('.side-btn').forEach(b => b.addEventListener('click', () => { sfx.init(); sfx.coin(); this.openMenu(b.dataset.tab); }));
     document.querySelectorAll('.menu-tab').forEach(b => b.addEventListener('click', () => { this.menuTab = b.dataset.tab; sfx.coin(); this.renderMenu(); }));
@@ -786,6 +999,7 @@ class DragonCraftWorld {
     nameInput.value = this.state.name;
 
     document.getElementById('btnPlayNow').addEventListener('click', () => {
+      this.state.stats.sessions = (this.state.stats.sessions || 0) + 1;
       sfx.init();
       sfx.spellCharge();
       const typed = nameInput.value.trim();
@@ -1569,9 +1783,14 @@ class DragonCraftWorld {
   // ==========================================================================
   openSpellForge(actionType) {
     this.pendingAction = actionType;
+    this.qStart = performance.now();
+    this.qWrong = 0;
     const biomeNow = BIOMES[this.state.islandIndex % BIOMES.length];
     const challenge = createVisualSTEMChallenge(this.state.level, actionType === 'CRYSTAL' ? biomeNow.goal.focus : 'mixed');
     this.activeChallenge = challenge;
+    const ci = challengeInfo(challenge.topic);
+    challenge.cat = ci[0];
+    challenge.subj = ci[1];
 
     document.getElementById('forgeTopicBadge').textContent = challenge.topic;
     document.getElementById('forgeStreakText').textContent = `🔥 Combo: ${this.state.streak}x`;
@@ -1605,6 +1824,7 @@ class DragonCraftWorld {
 
     if (String(val) === String(ch.correct)) {
       btn.classList.add('correct');
+      this.recordAnswer();
       sfx.spellCharge();
       this.state.streak++;
 
@@ -1615,6 +1835,7 @@ class DragonCraftWorld {
     } else {
       // Zero-shame instant visual scaffold! Keep modal open so they see the visual hint & succeed!
       btn.classList.add('wrong');
+      this.qWrong = (this.qWrong || 0) + 1;
       this.state.streak = 1;
       sfx.wrongTry();
       document.getElementById('forgeHelperTip').classList.remove('hidden');
