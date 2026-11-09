@@ -124,7 +124,69 @@ function make3Choices(correct) {
   return [...set].sort(() => Math.random() - 0.5);
 }
 
+// ============================================================================
+// ENGLISH / LANGUAGE ARTS CHALLENGES (Grade 3-5): vocab, spelling, grammar, rhymes
+// ============================================================================
+const ENGLISH_BANK = [
+  // [topic, prompt, hint, correct, wrong1, wrong2, bigText]
+  ['📖 DRAGON SYNONYMS', 'Which word means the SAME as "enormous"?', 'Enormous means very, very big!', 'huge', 'tiny', 'quiet', 'enormous = ?'],
+  ['📖 DRAGON SYNONYMS', 'Which word means the SAME as "swift"?', 'Swift means moving very fast!', 'fast', 'slow', 'heavy', 'swift = ?'],
+  ['📖 DRAGON SYNONYMS', 'Which word means the SAME as "brave"?', 'A brave knight is not afraid!', 'fearless', 'shy', 'sleepy', 'brave = ?'],
+  ['📖 DRAGON SYNONYMS', 'Which word means the SAME as "glad"?', 'Glad means feeling happy!', 'happy', 'angry', 'tired', 'glad = ?'],
+  ['📖 DRAGON SYNONYMS', 'Which word means the SAME as "ancient"?', 'Ancient means very, very old!', 'very old', 'brand new', 'shiny', 'ancient = ?'],
+  ['🔄 OPPOSITE RUNES', 'Which word is the OPPOSITE of "ancient"?', 'Opposite means totally different. Think of old vs...', 'modern', 'old', 'dusty', 'ancient ↔ ?'],
+  ['🔄 OPPOSITE RUNES', 'Which word is the OPPOSITE of "brave"?', 'Think of someone who is scared!', 'cowardly', 'mighty', 'kind', 'brave ↔ ?'],
+  ['🔄 OPPOSITE RUNES', 'Which word is the OPPOSITE of "generous"?', 'A generous person shares. The opposite does not!', 'selfish', 'friendly', 'wealthy', 'generous ↔ ?'],
+  ['🔄 OPPOSITE RUNES', 'Which word is the OPPOSITE of "expand"?', 'Expand means grow bigger. The opposite makes it smaller!', 'shrink', 'stretch', 'grow', 'expand ↔ ?'],
+  ['✏️ SPELLING SPELL', 'Which spelling is CORRECT?', 'Say it slowly: "dra-gon"... then check each letter!', 'dragon', 'dragin', 'dragun', 'dr_g_n'],
+  ['✏️ SPELLING SPELL', 'Which spelling is CORRECT?', 'Remember: "i before e, except after c" — rec-EI-ve!', 'receive', 'recieve', 'receeve', 'rec_ve'],
+  ['✏️ SPELLING SPELL', 'Which spelling is CORRECT?', 'It has a silent "w" at the start!', 'wizard', 'wizzard', 'wisard', 'wiz_rd'],
+  ['✏️ SPELLING SPELL', 'Which spelling is CORRECT?', 'There is a "gh" in the middle, and it is silent!', 'knight', 'nite', 'knite', 'k__ght'],
+  ['✏️ SPELLING SPELL', 'Which spelling is CORRECT?', 'Think of "friend" — you will see "end" at the finish!', 'friend', 'freind', 'frend', 'fr_end'],
+  ['✏️ SPELLING SPELL', 'Which spelling is CORRECT?', 'It sounds like "ad-ven-chur" but is spelled differently!', 'adventure', 'advencher', 'adventur', 'adven_ure'],
+  ['🧩 PLURAL POWER', 'More than one "mouse" is...', 'Mouse is special! It does not just add an "s".', 'mice', 'mouses', 'mices', '1 mouse → ?'],
+  ['🧩 PLURAL POWER', 'More than one "tooth" is...', 'Tooth changes its vowels: teeth!', 'teeth', 'tooths', 'teeths', '1 tooth → ?'],
+  ['🧩 PLURAL POWER', 'More than one "wolf" is...', 'Words ending in "f" often change to "ves"!', 'wolves', 'wolfs', 'wolfes', '1 wolf → ?'],
+  ['🧩 PLURAL POWER', 'More than one "child" is...', 'Child is special — it becomes a different word!', 'children', 'childs', 'childrens', '1 child → ?'],
+  ['🏷️ WORD TYPE', 'In "The dragon ROARED loudly", what kind of word is ROARED?', 'A verb is an ACTION word — what did the dragon DO?', 'verb', 'noun', 'adjective', 'ROARED = ?'],
+  ['🏷️ WORD TYPE', 'In "The SHINY crown fell", what kind of word is SHINY?', 'An adjective DESCRIBES a noun — how does the crown look?', 'adjective', 'verb', 'noun', 'SHINY = ?'],
+  ['🏷️ WORD TYPE', 'In "The WIZARD cast a spell", what kind of word is WIZARD?', 'A noun is a person, place or thing!', 'noun', 'verb', 'adjective', 'WIZARD = ?'],
+  ['🏷️ WORD TYPE', 'In "The knight ran QUICKLY", what kind of word is QUICKLY?', 'An adverb tells HOW something is done (it often ends in -ly)!', 'adverb', 'noun', 'adjective', 'QUICKLY = ?'],
+  ['🧱 FILL THE GAP', 'Pick the right word: "The dragons ___ flying over the castle."', 'Dragons is plural (more than one), so use "are"!', 'are', 'is', 'am', 'The dragons ___ flying'],
+  ['🧱 FILL THE GAP', 'Pick the right word: "Yesterday, the wizard ___ a new spell."', 'Yesterday means the past — the past of "learn" is...', 'learned', 'learn', 'learning', 'Yesterday he ___'],
+  ['🧱 FILL THE GAP', 'Pick the right word: "I saw ___ dragon in the sky."', 'Use "a" before consonant sounds, "an" before vowel sounds — dragon starts with "d"!', 'a', 'an', 'two', 'I saw ___ dragon'],
+  ['🧱 FILL THE GAP', 'Pick the right word: "Their castle is bigger than ___ ."', 'Use "ours" for something that belongs to us!', 'ours', 'our', "we's", 'bigger than ___'],
+  ['🎵 RHYME TIME', 'Which word RHYMES with "flame"?', 'Rhymes sound alike at the end: fl-AME, g-AME!', 'game', 'floor', 'flute', 'flame ≈ ?'],
+  ['🎵 RHYME TIME', 'Which word RHYMES with "night"?', 'Night, light, fight — they end with "-ight"!', 'light', 'nut', 'name', 'night ≈ ?'],
+  ['🎵 RHYME TIME', 'Which word RHYMES with "spell"?', 'Spell, bell, well — they end with "-ell"!', 'bell', 'spill', 'spoon', 'spell ≈ ?']
+];
+
+function createEnglishChallenge() {
+  const [topic, prompt, hint, correct, w1, w2, big] = ENGLISH_BANK[rand(0, ENGLISH_BANK.length - 1)];
+  return {
+    topic,
+    prompt,
+    hint,
+    correct,
+    choices: shuffle([correct, w1, w2]),
+    drawDiagram: ctx => {
+      ctx.clearRect(0, 0, 540, 150);
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#ffd166';
+      ctx.font = '900 44px sans-serif';
+      ctx.fillText(big, 270, 82);
+      ctx.fillStyle = '#9b5de5';
+      ctx.fillRect(170, 98, 200, 5);
+      ctx.fillStyle = '#06d6a0';
+      ctx.font = 'bold 28px sans-serif';
+      ctx.fillText('📚 ✨ 🐉', 270, 138);
+    }
+  };
+}
+
 function createVisualSTEMChallenge(level = 1) {
+  // ~40% English questions, mixed in with STEM
+  if (Math.random() < 0.4) return createEnglishChallenge();
   const types = ['array_mult', 'balance_eq', 'potion_frac', 'voxel_area', 'science_circuit'];
   const type = types[rand(0, types.length - 1)];
 
