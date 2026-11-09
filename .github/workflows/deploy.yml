@@ -23,6 +23,10 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+      - name: Check JavaScript and run question tests (blocks a broken deploy)
+        run: |
+          node --check questions.js && node --check game.js && node --check parent.js && node --check sw.js
+          node tests/questions.test.js
       - name: Configure Pages
         uses: actions/configure-pages@v5
       - name: Stamp cache-busting version
