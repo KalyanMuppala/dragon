@@ -25,6 +25,8 @@ jobs:
         uses: actions/checkout@v4
       - name: Configure Pages
         uses: actions/configure-pages@v5
+      - name: Stamp cache-busting version
+        run: sed -i "s/__V__/${GITHUB_SHA::8}/g" index.html
       - name: Upload static site artifact
         uses: actions/upload-pages-artifact@v3
         with:
