@@ -105,6 +105,15 @@ function rand(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = rand(0, i);
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
 function make3Choices(correct) {
   const set = new Set([String(correct)]);
   while (set.size < 3) {
@@ -200,13 +209,15 @@ function createVisualSTEMChallenge(level = 1) {
     const a = rand(1, denom - 2);
     const b = rand(1, denom - a);
     const ans = `${a + b}/${denom}`;
-    const cSet = new Set([ans, `${Math.max(1, a + b - 1)}/${denom}`, `${a + b}/${denom * 2}`]);
+    const cSet = new Set([ans, `${a + b + 1}/${denom}`, `${a + b}/${denom * 2}`]);
+    if (a + b > 1) cSet.add(`${a + b - 1}/${denom}`);
+    while (cSet.size < 3) cSet.add(`${rand(1, denom)}/${denom}`);
     return {
       topic: '🧪 ALCHEMIST DRAGON POTION',
       prompt: `You pour ${a}/${denom} Blue Mana and ${b}/${denom} Purple Mana into the flask. How full is it?`,
       hint: `Count the glowing filled bars out of ${denom}: ${a} + ${b} = ${a + b}, so ${a + b}/${denom}!`,
       correct: ans,
-      choices: [...cSet].sort(() => Math.random() - 0.5),
+      choices: shuffle([ans, ...[...cSet].filter(x => x !== ans).slice(0, 2)]),
       drawDiagram: ctx => {
         ctx.clearRect(0, 0, 540, 150);
         const barW = 46;
@@ -264,7 +275,7 @@ function createVisualSTEMChallenge(level = 1) {
       prompt: 'When Ignis heats Solid Ice Cubes with dragon fire, what state of matter does ice melt into first?',
       hint: 'Follow the arrow: Solid Ice melts into Liquid Water before boiling into Gas Steam!',
       correct: 'Liquid Water 💧',
-      choices: ['Liquid Water 💧', 'Solid Rock 🪨', 'Magnetic Iron 🧲'],
+      choices: shuffle(['Liquid Water 💧', 'Solid Rock 🪨', 'Magnetic Iron 🧲']),
       drawDiagram: ctx => {
         ctx.clearRect(0, 0, 540, 150);
         ctx.font = 'bold 22px sans-serif';
@@ -282,7 +293,7 @@ function createVisualSTEMChallenge(level = 1) {
       prompt: 'To make the Redstone Dragon Lamp glow, what must be true about the circuit loop?',
       hint: 'Electricity only flows when the loop is completely CLOSED with no gaps!',
       correct: 'The loop is CLOSED ⚡',
-      choices: ['The loop is CLOSED ⚡', 'The wire is cut in half ✂️', 'The battery is removed 🔋'],
+      choices: shuffle(['The loop is CLOSED ⚡', 'The wire is cut in half ✂️', 'The battery is removed 🔋']),
       drawDiagram: ctx => {
         ctx.clearRect(0, 0, 540, 150);
         ctx.strokeStyle = '#06d6a0';
@@ -393,8 +404,14 @@ class DragonCraftWorld {
   }
 
   resize() {
-    this.canvas.width = window.innerWidth;
-    this.canvas.height = window.innerHeight;
+    // Sharp on Retina iPads: backing store at devicePixelRatio, drawing in CSS pixels.
+    this.dpr = Math.min(window.devicePixelRatio || 1, 2);
+    this.vw = window.innerWidth;
+    this.vh = window.innerHeight;
+    this.canvas.width = Math.round(this.vw * this.dpr);
+    this.canvas.height = Math.round(this.vh * this.dpr);
+    // Fit the 9x9 island on any screen (portrait iPad too)
+    this.scale = Math.max(0.55, Math.min(1.25, this.vw / 760, this.vh / 620));
   }
 
   setupIslandEncounters() {
@@ -472,6 +489,53 @@ class DragonCraftWorld {
       }
     });
 
+    // ---- iPad thumbstick (multi-touch safe: tracks its own pointer id) ----
+    this.joy = { x: 0, y: 0, id: null };
+    const joyEl = document.getElementById('joystick');
+    const knob = document.getElementById('joystickKnob');
+    const R = 52;
+    const joyMove = e => {
+      const r = joyEl.getBoundingClientRect();
+      let dx = e.clientX - (r.left + r.width / 2);
+      let dy = e.clientY - (r.top + r.height / 2);
+      const d = Math.hypot(dx, dy);
+      if (d > R) { dx = (dx / d) * R; dy = (dy / d) * R; }
+      this.joy.x = dx / R;
+      this.joy.y = dy / R;
+      knob.style.transform = `translate(${dx}px, ${dy}px)`;
+    };
+    const joyEnd = e => {
+      if (e.pointerId !== this.joy.id) return;
+      this.joy = { x: 0, y: 0, id: null };
+      knob.style.transform = '';
+      joyEl.classList.remove('active');
+    };
+    joyEl.addEventListener('pointerdown', e => {
+      e.preventDefault();
+      sfx.init();
+      this.joy.id = e.pointerId;
+      joyEl.setPointerCapture(e.pointerId);
+      joyEl.classList.add('active');
+      joyMove(e);
+    });
+    joyEl.addEventListener('pointermove', e => { if (e.pointerId === this.joy.id) joyMove(e); });
+    joyEl.addEventListener('pointerup', joyEnd);
+    joyEl.addEventListener('pointercancel', joyEnd);
+
+    // ---- 1-tap quest orb: auto-walk to the current objective ----
+    document.getElementById('questOrb').addEventListener('click', () => {
+      sfx.init();
+      sfx.coin();
+      if (this.mode === 'WORLD' && this.currentTarget) {
+        this.hero.targetX = this.currentTarget.x;
+        this.hero.targetY = this.currentTarget.y;
+      }
+    });
+
+    // Block Safari pinch / double-tap zoom
+    ['gesturestart', 'gesturechange'].forEach(t => document.addEventListener(t, e => e.preventDefault()));
+    document.addEventListener('touchmove', e => e.preventDefault(), { passive: false });
+
     // Cycle active lead dragon
     document.getElementById('btnSwapDragon').addEventListener('click', () => {
       this.state.activeDragonIdx = (this.state.activeDragonIdx + 1) % this.state.dragons.length;
@@ -528,20 +592,20 @@ class DragonCraftWorld {
   // ISOMETRIC 3D VOXEL PROJECTION HELPERS
   // ==========================================================================
   isoToScreen(gx, gy, gz = 0) {
-    const tileW = 76;
-    const tileH = 38;
-    const originX = this.canvas.width / 2;
-    const originY = this.canvas.height * 0.28;
+    const tileW = 76 * this.scale;
+    const tileH = 38 * this.scale;
+    const originX = this.vw / 2;
+    const originY = this.vh * 0.5 - (this.gridSize * tileH) / 2 + tileH * 0.5;
     const sx = originX + (gx - gy) * (tileW / 2);
-    const sy = originY + (gx + gy) * (tileH / 2) - gz * 36;
+    const sy = originY + (gx + gy) * (tileH / 2) - gz * 36 * this.scale;
     return { x: sx, y: sy };
   }
 
   screenToIso(sx, sy) {
-    const tileW = 76;
-    const tileH = 38;
-    const dx = sx - this.canvas.width / 2;
-    const dy = sy - this.canvas.height * 0.28;
+    const tileW = 76 * this.scale;
+    const tileH = 38 * this.scale;
+    const dx = sx - this.vw / 2;
+    const dy = sy - (this.vh * 0.5 - (this.gridSize * tileH) / 2 + tileH * 0.5);
     const gx = Math.round((dx / (tileW / 2) + dy / (tileH / 2)) / 2);
     const gy = Math.round((dy / (tileH / 2) - dx / (tileW / 2)) / 2);
     return { gx, gy };
@@ -550,8 +614,9 @@ class DragonCraftWorld {
   drawIsoBlock(gx, gy, gz, heightPx, topColor, leftColor, rightColor, glowOutline = false) {
     const ctx = this.ctx;
     const p = this.isoToScreen(gx, gy, gz);
-    const w = 38;
-    const h = 19;
+    const w = 38 * this.scale;
+    const h = 19 * this.scale;
+    heightPx *= this.scale;
 
     // Top diamond face
     ctx.beginPath();
@@ -803,10 +868,11 @@ class DragonCraftWorld {
   // ==========================================================================
   loop(time) {
     const ctx = this.ctx;
-    const W = this.canvas.width;
-    const H = this.canvas.height;
+    const W = this.vw;
+    const H = this.vh;
 
     ctx.save();
+    ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     if (this.shakeTime > 0) {
       this.shakeTime--;
       const dx = (Math.random() - 0.5) * this.shakeMag;
@@ -828,6 +894,27 @@ class DragonCraftWorld {
   }
 
   updateWorld(time) {
+    // Thumbstick: screen direction -> isometric grid direction
+    const jm = this.joy ? Math.hypot(this.joy.x, this.joy.y) : 0;
+    if (jm > 0.2) {
+      const vgx = (this.joy.x / 38 + this.joy.y / 19) / 2;
+      const vgy = (this.joy.y / 19 - this.joy.x / 38) / 2;
+      const vl = Math.hypot(vgx, vgy) || 1;
+      const sp = 0.075 * Math.min(1, jm);
+      const lim = this.gridSize - 1;
+      this.hero.x = Math.max(0, Math.min(lim, this.hero.x + (vgx / vl) * sp));
+      this.hero.y = Math.max(0, Math.min(lim, this.hero.y + (vgy / vl) * sp));
+      this.hero.targetX = this.hero.x;
+      this.hero.targetY = this.hero.y;
+      if (Math.random() > 0.5) {
+        this.hero.trail.unshift({ x: this.hero.x, y: this.hero.y });
+        if (this.hero.trail.length > 60) this.hero.trail.pop();
+      }
+      if (Math.random() > 0.85) sfx.step();
+      this.checkObjectiveReached();
+      return;
+    }
+
     // Smoothly move hero toward target tile
     const dx = this.hero.targetX - this.hero.x;
     const dy = this.hero.targetY - this.hero.y;
@@ -942,7 +1029,7 @@ class DragonCraftWorld {
       } else {
         // Wild Dragon or Boss Dragon waiting on the island!
         const bossDragon = DRAGONS.find(d => d.id === biome.bossId) || DRAGONS[1];
-        this.drawDragonSprite(tp.x, tp.y - 10, bossDragon, time, this.state.stageOnIsland === 2 ? 1.15 : 0.9, true);
+        this.drawDragonSprite(tp.x, tp.y - 10, bossDragon, time, (this.state.stageOnIsland === 2 ? 1.15 : 0.9) * this.scale, true);
       }
 
       // Giant Bouncing Golden "CLICK HERE!" Arrow above the active target
@@ -971,12 +1058,12 @@ class DragonCraftWorld {
       const trailStep = Math.min(this.hero.trail.length - 1, (idx + 1) * 8);
       const pos = this.hero.trail[trailStep] || { x: this.hero.x - 0.7 * (idx + 1), y: this.hero.y };
       const sp = this.isoToScreen(pos.x, pos.y, 0.65);
-      this.drawDragonSprite(sp.x - 18, sp.y, dObj, time + idx * 400, 0.72, false);
+      this.drawDragonSprite(sp.x - 18 * this.scale, sp.y, dObj, time + idx * 400, 0.72 * this.scale, false);
     });
 
     // Draw Player Wizard Hero
     const hp = this.isoToScreen(this.hero.x, this.hero.y, 0.4);
-    this.drawWizardSprite(hp.x, hp.y, time, 1.05);
+    this.drawWizardSprite(hp.x, hp.y, time, 1.05 * this.scale);
   }
 
   // ==========================================================================
@@ -1001,6 +1088,9 @@ class DragonCraftWorld {
     };
 
     sfx.spellCharge();
+    this.joy = { x: 0, y: 0, id: null };
+    document.getElementById('joystick').classList.add('hidden');
+    document.getElementById('questOrb').classList.add('hidden');
     document.getElementById('battleDock').classList.remove('hidden');
     this.updateHUD();
   }
@@ -1149,14 +1239,15 @@ class DragonCraftWorld {
     } else {
       // Zero-shame instant visual scaffold! Keep modal open so they see the visual hint & succeed!
       btn.classList.add('wrong');
+      this.state.streak = 1;
       sfx.wrongTry();
       document.getElementById('forgeHelperTip').classList.remove('hidden');
     }
   }
 
   executeSuccessfulSpell() {
-    const W = this.canvas.width;
-    const H = this.canvas.height;
+    const W = this.vw;
+    const H = this.vh;
 
     // Award coins & XP
     const earnedCoins = 25 * this.state.streak;
@@ -1218,6 +1309,8 @@ class DragonCraftWorld {
 
   finishBattleVictory() {
     document.getElementById('battleDock').classList.add('hidden');
+    document.getElementById('joystick').classList.remove('hidden');
+    document.getElementById('questOrb').classList.remove('hidden');
     this.mode = 'WORLD';
 
     if (this.state.stageOnIsland === 1) {

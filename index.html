@@ -2,7 +2,12 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="DragonCraft" />
+  <meta name="theme-color" content="#070a14" />
   <title>DragonCraft: Prodigy Realm — 2.5D Voxel & Dragon STEM Adventure</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
@@ -55,6 +60,12 @@
       </button>
     </div>
   </div>
+
+  <!-- TOUCH CONTROLS: bottom-left thumbstick, bottom-right quest orb -->
+  <div id="joystick" class="joystick" aria-label="Move">
+    <div id="joystickKnob" class="joystick-knob"></div>
+  </div>
+  <button id="questOrb" class="quest-orb" aria-label="Go to quest">✨<span>GO!</span></button>
 
   <!-- ==================================================================== -->
   <!-- 1-CLICK HERO PORTAL (Lives over the animated 3D Voxel World!)        -->
