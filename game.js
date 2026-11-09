@@ -903,6 +903,34 @@ class DragonCraftWorld {
     return ['Needs practice', 'pd-bad', '#ef476f'];
   }
 
+  subjectPerfHTML(sub) {
+    const st = this.state.stats;
+    const cs = this.parentStats().cats.filter(c => c.subj === sub);
+    const a = cs.reduce((x, c) => x + c.asked, 0), f = cs.reduce((x, c) => x + c.first, 0);
+    if (a < 5) return `<div class="pd-card" style="text-align:left"><b style="font-size:1.2rem">${sub}</b><span>Needs a few more questions (${a} so far) to show how it's going.</span></div>`;
+    const pct = Math.round((f / a) * 100);
+    const label = pct >= 85 ? ['Excellent', 'pd-good'] : pct >= 70 ? ['Going well', 'pd-good'] : pct >= 55 ? ['Getting there', 'pd-ok'] : ['Needs practice', 'pd-bad'];
+    const mine = st.log.filter(r => r.subj === sub);
+    const first = r => r.tries === 1;
+    let trend = '';
+    if (mine.length >= 12) {
+      const recent = mine.slice(-8), before = mine.slice(-16, -8);
+      if (before.length >= 4) {
+        const d = Math.round((recent.filter(first).length / recent.length - before.filter(first).length / before.length) * 100);
+        trend = d >= 10 ? `📈 Improving (+${d} points recently)` : d <= -10 ? `📉 Slipping (${d} points recently)` : '➡️ Steady';
+      }
+    }
+    const ranked = cs.filter(c => c.asked >= 3).sort((x, y) => y.pct - x.pct);
+    const best = ranked[0], weak = ranked.length > 1 ? ranked[ranked.length - 1] : null;
+    const avgS = cs.reduce((x, c) => x + c.ms, 0) / a / 1000;
+    return `<div class="pd-card" style="text-align:left">
+      <b style="font-size:1.25rem">${sub}: <span class="${label[1]}">${label[0]}</span></b>
+      <div class="pd-bar" style="margin:8px 0"><i style="width:${pct}%;background:#06d6a0"></i></div>
+      <span style="display:block;line-height:1.6">${pct}% right on the first try across ${a} questions<br>
+      Average ${avgS.toFixed(0)}s per question${trend ? '<br>' + trend : ''}
+      ${best ? `<br>⭐ Strongest: ${best.name} (${best.pct}%)` : ''}${weak && weak.pct < 80 ? `<br>🎯 Practice: ${weak.name} (${weak.pct}%)` : ''}</span></div>`;
+  }
+
   parentDashboardHTML() {
     const S = this.parentStats();
     const st = this.state.stats;
@@ -952,8 +980,8 @@ class DragonCraftWorld {
       <div class="pd-sec">🕒 Recent questions</div>
       <table class="pd-table"><tr><th>When</th><th>Skill</th><th>Tries</th><th>Time</th></tr>
       ${rec.length ? rec.map(r => `<tr><td>${new Date(r.t).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</td><td>${r.cat}</td><td class="${r.tries === 1 ? 'pd-good' : 'pd-bad'}">${r.tries === 1 ? '✔ first try' : r.tries + ' tries'}</td><td>${(r.ms / 1000).toFixed(1)}s</td></tr>`).join('') : '<tr><td colspan="4">Nothing yet.</td></tr>'}</table>
-      <div class="pd-sec">ℹ️ About comparisons (IQ, India, USA)</div>
-      <div class="pd-note">This is a learning game, <b>not an IQ test</b>. It has no official national norms, so it cannot honestly say how your child ranks against other children in India or in a US state — any such number would be invented. Use the skill accuracy above to see strengths and gaps. For a real, normed comparison, ask the school for standardized results (for example NWEA MAP Growth or state tests in the USA; NCERT/NAS-style assessments or school exams in India) or a qualified child psychologist for an IQ assessment.</div>
+      <div class="pd-sec">📈 How is ${this.state.name} doing? Math vs English</div>
+      <div class="pd-cards" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr))">${['Math', 'English'].map(sub => this.subjectPerfHTML(sub)).join('')}</div>
       <div class="pd-actions">
         <button id="pdCopy" class="pd-btn">📋 Copy summary</button>
         <button id="pdCsv" class="pd-btn">⬇️ Answers (CSV)</button>
