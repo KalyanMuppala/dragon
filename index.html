@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DragonCraft: Prodigy STEM Realm — Magical Dragon & Voxel STEM Adventure</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="bg-particles"></div>
+
+  <!-- ==================================================================== -->
+  <!-- LOGIN & HERO CREATION PORTAL                                         -->
+  <!-- ==================================================================== -->
+  <div id="loginOverlay" class="login-overlay">
+    <div class="login-card">
+      <!-- Illustrated Dragon & Voxel Castle Banner SVG -->
+      <svg class="login-banner-svg" viewBox="0 0 600 140" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="skyGrad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#240046" />
+            <stop offset="50%" stop-color="#3c096c" />
+            <stop offset="100%" stop-color="#0f172a" />
+          </linearGradient>
+        </defs>
+        <rect width="600" height="140" rx="16" fill="url(#skyGrad)" stroke="#ffd166" stroke-width="3"/>
+        <!-- Voxel Floating Islands & Towers -->
+        <rect x="35" y="75" width="90" height="45" fill="#06d6a0" rx="4"/>
+        <rect x="35" y="92" width="90" height="35" fill="#5c3a21" rx="4"/>
+        <rect x="55" y="38" width="24" height="40" fill="#4cc9f0" stroke="#fff" stroke-width="2"/>
+        <rect x="85" y="50" width="22" height="28" fill="#9b5de5" stroke="#fff" stroke-width="2"/>
+        <!-- Right Voxel Treasure Island -->
+        <rect x="465" y="72" width="95" height="45" fill="#06d6a0" rx="4"/>
+        <rect x="465" y="88" width="95" height="36" fill="#5c3a21" rx="4"/>
+        <!-- Glowing Golden Chest on Right Island -->
+        <rect x="492" y="45" width="42" height="30" rx="5" fill="#ffd166" stroke="#fff" stroke-width="2"/>
+        <circle cx="513" cy="60" r="5" fill="#ef476f"/>
+        <!-- Center Emblem & Magical Equations -->
+        <circle cx="300" cy="70" r="52" fill="#ffd166" opacity="0.18"/>
+        <text x="175" y="48" fill="#ffd166" font-size="16" font-weight="bold">3x + 5 = 20</text>
+        <text x="365" y="45" fill="#06d6a0" font-size="16" font-weight="bold">7 × 8 = 56</text>
+        <text x="180" y="115" fill="#4cc9f0" font-size="15" font-weight="bold">Area = L × W</text>
+        <text x="365" y="115" fill="#f15bb5" font-size="15" font-weight="bold">⚡ STEM Magic</text>
+        <text x="300" y="86" text-anchor="middle" font-size="56">🐉</text>
+      </svg>
+
+      <h1 class="game-title">DRAGONCRAFT: PRODIGY REALM</h1>
+      <p class="game-subtitle">Spellcast STEM Equations • Mine Voxel Ores • Tame Dragons • Unbox Surprise Chests!</p>
+
+      <div id="savedProfilesWrap" class="saved-profiles-bar" style="display:none;">
+        <span class="field-label">⚡ Instant 1-Click Login (Saved Heroes):</span>
+        <div id="savedProfilesList" class="saved-profiles-list"></div>
+      </div>
+
+      <div class="login-grid">
+        <div class="login-section">
+          <h3>🧙‍♂️ 1. Wizard / Crafter Login</h3>
+          <label class="field-label" for="loginUsername">Hero Name (Username)</label>
+          <input id="loginUsername" class="voxel-input" type="text" placeholder="e.g., DragonKingAryan" value="DragonCrafter" />
+
+          <label class="field-label" for="loginPin">Secret 4-Digit Rune Code (PIN)</label>
+          <input id="loginPin" class="voxel-input" type="password" maxlength="8" placeholder="1234" value="1234" />
+
+          <label class="field-label">Choose Your Hero Class</label>
+          <div class="picker-grid">
+            <div class="picker-option class-option selected" data-class="mage">
+              <span class="picker-icon">🧙‍♂️</span>
+              <div class="picker-info">
+                <strong>Redstone Mage</strong>
+                <span>Equation Master</span>
+              </div>
+            </div>
+            <div class="picker-option class-option" data-class="knight">
+              <span class="picker-icon">⚔️</span>
+              <div class="picker-info">
+                <strong>Ender Knight</strong>
+                <span>Voxel Defender</span>
+              </div>
+            </div>
+            <div class="picker-option class-option" data-class="alchemist">
+              <span class="picker-icon">🧪</span>
+              <div class="picker-info">
+                <strong>Aether Alchemist</strong>
+                <span>Science Brewer</span>
+              </div>
+            </div>
+            <div class="picker-option class-option" data-class="ranger">
+              <span class="picker-icon">🏹</span>
+              <div class="picker-info">
+                <strong>Emerald Ranger</strong>
+                <span>Geometry Scout</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="login-section">
+          <h3>🐉 2. Choose Your Starter Dragon</h3>
+          <div class="picker-grid" style="grid-template-columns: 1fr;">
+            <div class="picker-option dragon-option selected" data-dragon="ignis">
+              <span class="picker-icon">🔥</span>
+              <div class="picker-info">
+                <strong>Ignis the Magma Drake</strong>
+                <span>Fire & Thermal Energy • High Attack</span>
+              </div>
+            </div>
+            <div class="picker-option dragon-option" data-dragon="voltscale">
+              <span class="picker-icon">⚡</span>
+              <div class="picker-info">
+                <strong>Voltscale the Redstone Wyvern</strong>
+                <span>Lightning & Circuits • Critical Surge</span>
+              </div>
+            </div>
+            <div class="picker-option dragon-option" data-dragon="cryowing">
+              <span class="picker-icon">❄️</span>
+              <div class="picker-info">
+                <strong>Cryowing the Frostisk</strong>
+                <span>Ice & Crystal Matter • High HP Shield</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+        <button id="btnStartAdventure" class="btn-voxel btn-gold">🚀 Enter DragonCraft World</button>
+        <button id="btnQuickDemo" class="btn-voxel btn-purple">⚡ Quick Play Demo Hero</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================================================================== -->
+  <!-- MAIN GAME INTERFACE                                                  -->
+  <!-- ==================================================================== -->
+  <div class="app-shell">
+    <!-- TOP HUD -->
+    <header class="top-hud">
+      <div class="hero-badge">
+        <div class="hero-avatar-box">
+          <span id="hudAvatarIcon">🧙‍♂️</span>
+          <span id="hudLevelPill" class="level-pill">Lv.1</span>
+        </div>
+        <div class="hero-meta">
+          <h2>
+            <span id="hudHeroName">DragonCrafter</span>
+            <button id="btnSwitchHero" class="btn-voxel btn-sm" style="padding:3px 9px;font-size:0.74rem;">Switch Hero</button>
+          </h2>
+          <div class="xp-bar-wrap">
+            <div id="hudXpFill" class="xp-bar-fill"></div>
+          </div>
+          <div id="hudXpText" class="xp-text">0 / 100 XP to Level 2</div>
+        </div>
+      </div>
+
+      <div class="hud-stats">
+        <div class="stat-chip gold" title="Game Points earned by solving STEM challenges">
+          ⭐ <span id="hudPoints">150</span> Pts
+        </div>
+        <div class="stat-chip streak" title="Current Correct Answer Streak">
+          🔥 Streak: <span id="hudStreak">0x</span>
+        </div>
+        <div class="stat-chip purple" title="Dragons Collected in Sanctuary">
+          🐉 Dragons: <span id="hudDragonsCount">1/8</span>
+        </div>
+        <div class="stat-chip emerald" title="Total STEM Problems Solved">
+          🧠 Solved: <span id="hudSolvedCount">0</span>
+        </div>
+        <button id="btnSoundToggle" class="btn-voxel btn-sm">🔊 Sound: ON</button>
+      </div>
+    </header>
+
+    <!-- NAVIGATION TABS -->
+    <nav class="nav-tabs">
+      <button class="nav-tab active" data-tab="world">🗺️ Voxel World Map</button>
+      <button class="nav-tab" data-tab="battle">⚔️ Dragon Spell Arena</button>
+      <button class="nav-tab" data-tab="chests">
+        🎁 Chests & Surprises <span id="navChestBadge" class="badge-count">1</span>
+      </button>
+      <button class="nav-tab" data-tab="dragons">🐉 Dragon Sanctuary & Craft</button>
+      <button class="nav-tab" data-tab="achievements">🏆 Achievements & STEM Controls</button>
+    </nav>
+
+    <!-- ==================================================================== -->
+    <!-- TAB 1: VOXEL WORLD MAP                                               -->
+    <!-- ==================================================================== -->
+    <section id="tab-world" class="tab-panel active">
+      <div class="world-layout">
+        <div class="canvas-card">
+          <div id="realmSelectorBar" class="realm-selector"></div>
+          <canvas id="worldCanvas" width="800" height="480"></canvas>
+          <div class="world-controls-bar">
+            <div style="font-size:0.86rem;color:var(--text-muted);">
+              🎮 <strong>How to Explore:</strong> Click any square, use <strong>WASD / Arrow Keys</strong>, or tap the D-Pad! Walk onto <strong>💎 Ores</strong> to mine, <strong>🎁 Chests</strong> for surprises, or <strong>🐉 Dragons</strong> to duel!
+            </div>
+            <div class="dpad-group">
+              <button class="dpad-btn" data-dir="left">◀</button>
+              <button class="dpad-btn" data-dir="up">▲</button>
+              <button class="dpad-btn" data-dir="down">▼</button>
+              <button class="dpad-btn" data-dir="right">▶</button>
+            </div>
+          </div>
+        </div>
+
+        <aside class="side-panel">
+          <div class="panel-card">
+            <h3>📜 Active Prodigy Quests</h3>
+            <div id="activeQuestsList" class="quest-list"></div>
+          </div>
+
+          <div class="panel-card">
+            <h3>⛏️ Mined Voxel Ores</h3>
+            <div id="voxelInventoryGrid" class="inventory-grid"></div>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- ==================================================================== -->
+    <!-- TAB 2: PRODIGY DRAGON SPELL BATTLE ARENA                             -->
+    <!-- ==================================================================== -->
+    <section id="tab-battle" class="tab-panel">
+      <div class="battle-stage">
+        <div class="battle-top-bar">
+          <div class="combatant-hud">
+            <div class="combatant-header">
+              <span id="heroBattleName">Wizard & Ignis</span>
+              <span id="heroHpText" style="color:var(--accent-emerald);">120 / 120 HP</span>
+            </div>
+            <div class="hp-bar-outer">
+              <div id="heroHpBar" class="hp-bar-inner"></div>
+            </div>
+          </div>
+
+          <div class="combatant-hud enemy">
+            <div class="combatant-header">
+              <span id="enemyBattleName">Wild Dragon</span>
+              <span id="enemyHpText" style="color:var(--accent-red);">110 / 110 HP</span>
+            </div>
+            <div class="hp-bar-outer">
+              <div id="enemyHpBar" class="hp-bar-inner enemy-hp"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="battle-visual-scene">
+          <div class="fighter-pod">
+            <div id="heroFighterArt" class="fighter-svg-wrap"></div>
+            <span class="rarity-tag rarity-common">Your Dragon Companion</span>
+          </div>
+
+          <div class="vs-badge">VS</div>
+
+          <div class="fighter-pod enemy">
+            <div id="enemyFighterArt" class="fighter-svg-wrap"></div>
+            <span class="rarity-tag rarity-epic">Wild Challenger</span>
+          </div>
+        </div>
+
+        <div style="text-align:center;margin:8px 0 14px;padding:10px;background:rgba(0,0,0,0.45);border-radius:12px;border:1px solid #3c4d84;">
+          <strong id="battleLogText" style="color:var(--accent-gold);font-size:1rem;">
+            ⚡ Choose a Spell Card below! Solve the STEM Equation to unleash your Dragon's power!
+          </strong>
+        </div>
+
+        <div class="spell-deck">
+          <div class="spell-card" data-spell="fireball">
+            <div class="spell-card-top">
+              <span class="spell-icon">🔥</span>
+              <span class="spell-tag">Heavy Attack</span>
+            </div>
+            <h4>Pyro Equation Blast</h4>
+            <p>Solve a STEM problem to launch a blazing dragon fireball!</p>
+          </div>
+
+          <div class="spell-card" data-spell="lightning">
+            <div class="spell-card-top">
+              <span class="spell-icon">⚡</span>
+              <span class="spell-tag">1.25x Crit Surge</span>
+            </div>
+            <h4>Redstone Thunder Strike</h4>
+            <p>High-voltage STEM strike that deals 25% bonus critical damage!</p>
+          </div>
+
+          <div class="spell-card" data-spell="heal">
+            <div class="spell-card-top">
+              <span class="spell-icon">💚</span>
+              <span class="spell-tag">Heal + Splash</span>
+            </div>
+            <h4>Emerald Elixir Shield</h4>
+            <p>Restore 42% of your HP while splashing arcane energy!</p>
+          </div>
+
+          <div class="spell-card" data-spell="tame">
+            <div class="spell-card-top">
+              <span class="spell-icon">🔮</span>
+              <span class="spell-tag">Capture Dragon</span>
+            </div>
+            <h4>Dragon Taming Crystal</h4>
+            <p>Weaken a Wild Dragon below 65% HP and solve to tame it!</p>
+          </div>
+        </div>
+
+        <div style="margin-top:14px;text-align:right;">
+          <button id="btnNewWildDragon" class="btn-voxel btn-sm">🔄 Summon Different Wild Dragon</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================================================================== -->
+    <!-- TAB 3: CHESTS VAULT & LEVEL/ACHIEVEMENT SURPRISES                    -->
+    <!-- ==================================================================== -->
+    <section id="tab-chests" class="tab-panel">
+      <div class="panel-card" style="margin-bottom:16px;">
+        <h3>🎁 Magical Treasure Chests & Level-Up Surprises</h3>
+        <p style="color:var(--text-muted);font-size:0.9rem;margin-bottom:14px;">
+          Every Level-Up and every Achievement automatically rewards a free Surprise Chest! You can also redeem your STEM Game Points to unbox rare Dragon Eggs, Voxel Gear, and STEM Fact Relics!
+        </p>
+        <div id="chestsVaultGrid" class="chests-grid"></div>
+      </div>
+
+      <div class="panel-card">
+        <h3>👑 Collected Surprise Relics & STEM Fact Cards</h3>
+        <div id="relicsCollectionGrid" class="achievements-grid"></div>
+      </div>
+    </section>
+
+    <!-- ==================================================================== -->
+    <!-- TAB 4: DRAGON SANCTUARY & VOXEL CRAFTING                             -->
+    <!-- ==================================================================== -->
+    <section id="tab-dragons" class="tab-panel">
+      <div class="panel-card" style="margin-bottom:16px;">
+        <h3>🐉 Elemental Dragon Sanctuary (Equip & Evolve)</h3>
+        <p style="color:var(--text-muted);font-size:0.9rem;margin-bottom:14px;">
+          Tame dragons in the Battle Arena or hatch them from Epic & Mythic Chests! Evolving your dragons increases their spell damage in battles.
+        </p>
+        <div id="dragonsSanctuaryGrid" class="dragons-grid"></div>
+      </div>
+
+      <div class="panel-card">
+        <h3>🔨 Minecraft-Style Voxel STEM Monuments (Craft with Mined Ores)</h3>
+        <p style="color:var(--text-muted);font-size:0.9rem;margin-bottom:14px;">
+          Use the Emeralds, Diamonds, Redstone, Gold, and Amethyst you mined on the Voxel World Map to build permanent power monuments!
+        </p>
+        <div id="voxelCraftingGrid" class="chests-grid"></div>
+      </div>
+    </section>
+
+    <!-- ==================================================================== -->
+    <!-- TAB 5: ACHIEVEMENTS & PARENT/CURRICULUM CONTROLS                     -->
+    <!-- ==================================================================== -->
+    <section id="tab-achievements" class="tab-panel">
+      <div class="panel-card" style="margin-bottom:16px;">
+        <h3>🎛️ STEM Curriculum & Difficulty Tuner (For Kids & Parents)</h3>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;margin-top:10px;">
+          <div>
+            <label class="field-label" for="selectGradeLevel">School Grade / Challenge Tier</label>
+            <select id="selectGradeLevel" class="voxel-select">
+              <option value="3">Grade 3 (Ages 8–9 • Core Foundations)</option>
+              <option value="4" selected>Grade 4 (Age 9 Default • Prodigy Explorer)</option>
+              <option value="5">Grade 5 (Ages 10–11 • Advanced Master)</option>
+            </select>
+          </div>
+          <div>
+            <label class="field-label" for="selectTopicFocus">STEM Spell Topic Focus</label>
+            <select id="selectTopicFocus" class="voxel-select">
+              <option value="all" selected>🌟 All STEM Topics Mixed (Recommended)</option>
+              <option value="equations">🔮 Algebraic Equations (Solve for Dragon Rune)</option>
+              <option value="multiplication">⚡ Multiplication & Division Arrays</option>
+              <option value="geometry">📐 Voxel Geometry (Area & Perimeter)</option>
+              <option value="fractions">🧪 Potion Fractions & Ratios</option>
+              <option value="science">🔬 Elementary Science (Physics, Space, Biology)</option>
+              <option value="logic">🤖 Redstone Coding & Number Patterns</option>
+            </select>
+          </div>
+          <div style="display:flex;gap:12px;align-items:center;justify-content:space-around;background:#10162a;border-radius:12px;padding:12px;">
+            <div>
+              <div style="font-size:0.78rem;color:var(--text-muted);">STEM Accuracy</div>
+              <div id="statAccuracy" style="font-size:1.4rem;font-weight:900;color:var(--accent-emerald);">100%</div>
+            </div>
+            <div>
+              <div style="font-size:0.78rem;color:var(--text-muted);">Best Streak</div>
+              <div id="statBestStreak" style="font-size:1.4rem;font-weight:900;color:var(--accent-gold);">0x</div>
+            </div>
+            <div>
+              <div style="font-size:0.78rem;color:var(--text-muted);">Chests Unboxed</div>
+              <div id="statChestsOpened" style="font-size:1.4rem;font-weight:900;color:var(--accent-purple);">0</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel-card">
+        <h3>🏆 Milestone Achievements (Every Badge Grants a Free Surprise Chest!)</h3>
+        <div id="achievementsGrid" class="achievements-grid"></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ==================================================================== -->
+  <!-- STEM SPELLCASTING MODAL                                              -->
+  <!-- ==================================================================== -->
+  <div id="stemModal" class="modal-backdrop hidden">
+    <div class="stem-modal">
+      <div class="stem-header">
+        <span id="stemCategoryBadge" class="stem-category-badge">🔮 Algebraic Dragon Equation</span>
+        <span id="stemStreakBadge" style="color:var(--accent-gold);font-weight:900;">🔥 Streak: 0x</span>
+      </div>
+
+      <div class="stem-question-box">
+        <div id="stemPromptText" class="stem-equation-display">Solve: 3 × 🐉 + 4 = 19</div>
+        <div id="stemVisualBox" class="stem-visual-helper">Visual Helper</div>
+      </div>
+
+      <div id="stemHintBox" class="hint-box hidden"></div>
+
+      <div id="stemAnswersGrid" class="answers-grid"></div>
+
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+        <button id="btnShowHint" class="btn-voxel btn-gold btn-sm">💡 Need a Step-by-Step Hint?</button>
+        <button id="btnCloseStemModal" class="btn-voxel btn-sm" style="background:#2b3863;color:#fff;border-bottom-color:#161e38;">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================================================================== -->
+  <!-- SURPRISE CHEST & LEVEL-UP CELEBRATION MODAL                          -->
+  <!-- ==================================================================== -->
+  <div id="surpriseModal" class="modal-backdrop hidden">
+    <div class="surprise-modal">
+      <h2 id="surpriseHeadline" style="color:var(--accent-gold);font-size:1.55rem;margin-bottom:4px;">🎉 SURPRISE UNLOCKED!</h2>
+      <p id="surpriseSubtitle" style="color:var(--text-muted);font-size:0.92rem;margin-bottom:12px;">You earned a Mystery Reward!</p>
+
+      <div id="surpriseChestArt" style="margin:10px auto;"></div>
+
+      <div class="surprise-reward-box">
+        <h3 id="surpriseRewardTitle" style="color:#06d6a0;font-size:1.25rem;margin-bottom:6px;">Reward Name</h3>
+        <p id="surpriseRewardDesc" style="color:#fff;font-size:0.92rem;margin-bottom:10px;">Reward bonus details</p>
+        <div id="surpriseStemFact" style="background:rgba(255,209,102,0.12);border-left:4px solid var(--accent-gold);padding:8px 10px;border-radius:8px;font-size:0.84rem;color:#ffe8a3;text-align:left;"></div>
+      </div>
+
+      <button id="btnCloseSurprise" class="btn-voxel btn-gold">✨ Awesome! Keep Playing</button>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION -->
+  <div id="toastBanner" class="toast-banner hidden"></div>
+
+  <script src="game.js"></script>
+</body>
+</html>
