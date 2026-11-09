@@ -120,18 +120,18 @@ const SURPRISES = [
 
 // --- BIOMES / ISLANDS ---
 const BIOME_DEFS = [
-  { title: 'EMERALD VOXEL WOODS', icon: '🌲', top: '#2ec4b6', water: '#0b1d3a', guardId: 'sprout', bossId: 'terra' },
-  { title: 'REDSTONE MAGMA CITADEL', icon: '🌋', top: '#e76f51', water: '#2a080c', guardId: 'magma', bossId: 'volt' },
-  { title: 'CRYSTAL SKY SANCTUARY', icon: '☁️', top: '#4cc9f0', water: '#0f172a', guardId: 'cloud', bossId: 'crystal' },
-  { title: 'OBSIDIAN ENDER KEEP', icon: '🔮', top: '#9b5de5', water: '#090414', guardId: 'shadow', bossId: 'ender' },
-  { title: 'GOLDEN SAND DUNES', icon: '🏜️', top: '#e9c46a', water: '#2b1d08', guardId: 'sandy', bossId: 'solar' },
-  { title: 'CORAL REEF LAGOON', icon: '🌊', top: '#38b6c9', water: '#052a3a', guardId: 'coral', bossId: 'bubble' },
-  { title: 'FROZEN GLACIER PEAKS', icon: '❄️', top: '#a8dadc', water: '#0c1f33', guardId: 'frost', bossId: 'aurora' },
-  { title: 'MISTY SWAMP HOLLOW', icon: '🐸', top: '#6a994e', water: '#0d1f10', guardId: 'swamp', bossId: 'rune' },
-  { title: 'CANDY CLOUD KINGDOM', icon: '🍭', top: '#ff8fab', water: '#2a0f1d', guardId: 'candy', bossId: 'shock' },
-  { title: 'CLOCKWORK STEEL FORGE', icon: '⚙️', top: '#8d99ae', water: '#10151c', guardId: 'steel', bossId: 'thunder' },
-  { title: 'MOONLIT JUNGLE RUINS', icon: '🌴', top: '#40916c', water: '#07170f', guardId: 'jungle', bossId: 'pearl' },
-  { title: 'STARFALL COSMIC ISLE', icon: '⭐', top: '#7b2cbf', water: '#05010f', guardId: 'nebula', bossId: 'phoenix' }
+  { title: 'EMERALD VOXEL WOODS', icon: '🌲', top: '#2ec4b6', water: '#0b1d3a', guardId: 'sprout', bossId: 'terra', goal: { kind: 'single', n: 1, icon: '💎', noun: 'Glowing Mana Crystal', focus: 'mixed', short: 'Mine the Mana Crystal' } },
+  { title: 'REDSTONE MAGMA CITADEL', icon: '🌋', top: '#e76f51', water: '#2a080c', guardId: 'magma', bossId: 'volt', goal: { kind: 'collect', n: 3, icon: '🔥', noun: 'Fire Gem', focus: 'math', short: 'Collect 3 Fire Gems (math!)' } },
+  { title: 'CRYSTAL SKY SANCTUARY', icon: '☁️', top: '#4cc9f0', water: '#0f172a', guardId: 'cloud', bossId: 'crystal', goal: { kind: 'collect', n: 3, icon: '☁️', noun: 'Sky Crystal', focus: 'mixed', short: 'Collect 3 Sky Crystals' } },
+  { title: 'OBSIDIAN ENDER KEEP', icon: '🔮', top: '#9b5de5', water: '#090414', guardId: 'shadow', bossId: 'ender', goal: { kind: 'combo', n: 3, icon: '🔮', noun: 'Ender Portal', verb: 'Seal the Ender Portal', focus: 'mixed', short: 'Seal the portal: 3-spell combo' } },
+  { title: 'GOLDEN SAND DUNES', icon: '🏜️', top: '#e9c46a', water: '#2b1d08', guardId: 'sandy', bossId: 'solar', goal: { kind: 'collect', n: 4, icon: '🏺', noun: 'Sun Relic', focus: 'math', short: 'Dig up 4 Sun Relics (math!)' } },
+  { title: 'CORAL REEF LAGOON', icon: '🌊', top: '#38b6c9', water: '#052a3a', guardId: 'coral', bossId: 'bubble', goal: { kind: 'collect', n: 4, icon: '🦪', noun: 'Pearl', focus: 'mixed', short: 'Gather 4 Pearls' } },
+  { title: 'FROZEN GLACIER PEAKS', icon: '❄️', top: '#a8dadc', water: '#0c1f33', guardId: 'frost', bossId: 'aurora', goal: { kind: 'combo', n: 3, icon: '🧊', noun: 'Ice Gate', verb: 'Melt the Ice Gate', focus: 'english', short: 'Melt the gate: 3 word spells (English!)' } },
+  { title: 'MISTY SWAMP HOLLOW', icon: '🐸', top: '#6a994e', water: '#0d1f10', guardId: 'swamp', bossId: 'rune', goal: { kind: 'collect', n: 4, icon: '🍄', noun: 'Glowing Mushroom', focus: 'english', short: 'Pick 4 Mushrooms (English!)' } },
+  { title: 'CANDY CLOUD KINGDOM', icon: '🍭', top: '#ff8fab', water: '#2a0f1d', guardId: 'candy', bossId: 'shock', goal: { kind: 'collect', n: 5, icon: '🍬', noun: 'Candy Gem', focus: 'mixed', short: 'Collect 5 Candy Gems' } },
+  { title: 'CLOCKWORK STEEL FORGE', icon: '⚙️', top: '#8d99ae', water: '#10151c', guardId: 'steel', bossId: 'thunder', goal: { kind: 'combo', n: 4, icon: '⚙️', noun: 'Giant Gear', verb: 'Repair the Giant Gear', focus: 'math', short: 'Repair the gear: 4-spell combo (math!)' } },
+  { title: 'MOONLIT JUNGLE RUINS', icon: '🌴', top: '#40916c', water: '#07170f', guardId: 'jungle', bossId: 'pearl', goal: { kind: 'collect', n: 5, icon: '📜', noun: 'Ancient Rune', focus: 'english', short: 'Find 5 Ancient Runes (English!)' } },
+  { title: 'STARFALL COSMIC ISLE', icon: '⭐', top: '#7b2cbf', water: '#05010f', guardId: 'nebula', bossId: 'phoenix', goal: { kind: 'combo', n: 5, icon: '⭐', noun: 'Star Core', verb: 'Wake the Star Core', focus: 'mixed', short: 'Wake the Star Core: 5-spell combo' } }
 ];
 
 function shadeHex(hex, f) {
@@ -234,10 +234,12 @@ function createEnglishChallenge() {
   };
 }
 
-function createVisualSTEMChallenge(level = 1) {
-  // ~40% English questions, mixed in with STEM
-  if (Math.random() < 0.4) return createEnglishChallenge();
-  const types = ['array_mult', 'balance_eq', 'potion_frac', 'voxel_area', 'science_circuit'];
+function createVisualSTEMChallenge(level = 1, focus = 'mixed') {
+  // focus: 'english' = all English, 'math' = no English, 'mixed' = ~40% English
+  if (focus === 'english' || (focus !== 'math' && Math.random() < 0.4)) return createEnglishChallenge();
+  const types = focus === 'math'
+    ? ['array_mult', 'balance_eq', 'potion_frac', 'voxel_area']
+    : ['array_mult', 'balance_eq', 'potion_frac', 'voxel_area', 'science_circuit'];
   const type = types[rand(0, types.length - 1)];
 
   if (type === 'array_mult') {
@@ -551,6 +553,7 @@ class DragonCraftWorld {
       dragons: ['ignis'],
       activeDragonIdx: 0,
       gear: [], // 'crown_gold', 'wings_aether', 'staff_nether', 'pet_star'
+      goalProgress: 0, // progress through this island's mini-goal
       squad: ['ignis'], // up to 3 equipped dragons that follow you; squad[0] is the lead
       character: 0,
       maxIsland: 0,
@@ -589,8 +592,24 @@ class DragonCraftWorld {
       { x: 7, y: 2 }  // Stage 2: Island Boss Dragon & Mystery Chest
     ];
 
+    const biome = BIOMES[this.state.islandIndex % BIOMES.length];
+    const goal = biome.goal;
+    const prog = this.state.goalProgress || 0;
+    // Waypoint pool for "collect" goals (rotated per island so each island feels different)
+    const pool = [{ x: 3, y: 2 }, { x: 6, y: 3 }, { x: 2, y: 6 }, { x: 6, y: 7 }, { x: 5, y: 5 }, { x: 1, y: 7 }, { x: 7, y: 1 }, { x: 3, y: 6 }];
+    const off = (this.state.islandIndex * 3) % pool.length;
+    let first;
+    if (goal.kind === 'collect') {
+      const w = pool[(off + Math.min(prog, goal.n - 1)) % pool.length];
+      first = { x: w.x, y: w.y, label: `${goal.icon} Find the ${goal.noun}! (${prog}/${goal.n})` };
+    } else if (goal.kind === 'combo') {
+      first = { x: 4, y: 4, label: `${goal.icon} ${goal.verb}! Answer ${goal.n} spells in a row (${prog}/${goal.n})` };
+    } else {
+      first = { x: 4, y: 4, label: '✨ Walk along the Golden Tiles to the Glowing Mana Crystal!' };
+    }
+
     const stageTargets = [
-      { x: 4, y: 4, label: '✨ Walk along the Golden Tiles to the Glowing Mana Crystal!' },
+      first,
       { x: 4, y: 2, label: '⚔️ Approach the Wild Guardian Dragon on the Golden Path!' },
       { x: 7, y: 2, label: '👑 Challenge the Island Boss Dragon to unlock the Giant Chest!' }
     ];
@@ -735,6 +754,7 @@ class DragonCraftWorld {
             <div class="island-big">${unlocked ? b.icon : '🔒'}</div>
             <div class="nm">${i + 1}. ${b.title}</div>
             <div class="sub">${unlocked ? (here ? 'You are here' : 'Tap to sail!') : 'Beat the previous boss'}</div>
+            <div class="sub goal">${b.goal.icon} ${b.goal.short}</div>
             ${here ? '<div class="tag">HERE</div>' : ''}</div>`;
         }).join('') + '</div>';
       body.querySelectorAll('.menu-item:not(.locked)').forEach(el => el.addEventListener('click', () => {
@@ -742,6 +762,7 @@ class DragonCraftWorld {
         if (target !== this.state.islandIndex) {
           this.state.islandIndex = target;
           this.state.stageOnIsland = 0;
+          this.state.goalProgress = 0;
           this.hero.x = this.hero.targetX = 1;
           this.hero.y = this.hero.targetY = 4;
           this.hero.trail = [];
@@ -1272,6 +1293,8 @@ class DragonCraftWorld {
     if (!this.currentTarget) return;
     if (!document.getElementById('spellForgeOverlay').classList.contains('hidden')) return;
     if (!document.getElementById('chestOverlay').classList.contains('hidden')) return;
+    if (!document.getElementById('menuOverlay').classList.contains('hidden')) return;
+    if (performance.now() < (this.nextForgeAt || 0)) return;
 
     const d = Math.hypot(this.hero.x - this.currentTarget.x, this.hero.y - this.currentTarget.y);
     if (d < 0.35) {
@@ -1340,7 +1363,16 @@ class DragonCraftWorld {
       const tp = this.isoToScreen(this.currentTarget.x, this.currentTarget.y, 0.5);
       const bounce = Math.sin(time * 0.008) * 10;
 
-      if (this.state.stageOnIsland === 0) {
+      if (this.state.stageOnIsland === 0 && biome.goal.kind !== 'single') {
+        ctx.save();
+        ctx.translate(tp.x, tp.y - 22 + bounce * 0.4);
+        ctx.font = `${Math.round(54 * this.scale)}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.shadowColor = '#ffd166';
+        ctx.shadowBlur = 24;
+        ctx.fillText(biome.goal.icon, 0, 0);
+        ctx.restore();
+      } else if (this.state.stageOnIsland === 0) {
         // Giant Glowing Redstone/Emerald Crystal Spire
         ctx.save();
         ctx.translate(tp.x, tp.y - 24 + bounce * 0.4);
@@ -1525,7 +1557,8 @@ class DragonCraftWorld {
   // ==========================================================================
   openSpellForge(actionType) {
     this.pendingAction = actionType;
-    const challenge = createVisualSTEMChallenge(this.state.level);
+    const biomeNow = BIOMES[this.state.islandIndex % BIOMES.length];
+    const challenge = createVisualSTEMChallenge(this.state.level, actionType === 'CRYSTAL' ? biomeNow.goal.focus : 'mixed');
     this.activeChallenge = challenge;
 
     document.getElementById('forgeTopicBadge').textContent = challenge.topic;
@@ -1602,14 +1635,21 @@ class DragonCraftWorld {
     this.gainXP(40);
 
     if (this.pendingAction === 'CRYSTAL') {
-      // Shatter crystal on Island Stage 0!
+      const goal = BIOMES[this.state.islandIndex % BIOMES.length].goal;
       sfx.laserBlast();
       this.triggerScreenShake(12, 14);
       const tp = this.isoToScreen(this.currentTarget.x, this.currentTarget.y, 0.5);
       this.spawnBurst(tp.x, tp.y, '#06d6a0', 32);
-      this.spawnFloatText(tp.x, tp.y - 40, `+${earnedCoins} GOLD & MANA!`, '#ffd166');
+      this.state.goalProgress = (this.state.goalProgress || 0) + 1;
+      this.nextForgeAt = performance.now() + 1100;
 
-      this.state.stageOnIsland = 1;
+      if (this.state.goalProgress < goal.n) {
+        this.spawnFloatText(tp.x, tp.y - 40, `${goal.icon} ${this.state.goalProgress} / ${goal.n}!`, '#ffd166');
+      } else {
+        this.spawnFloatText(tp.x, tp.y - 40, `+${earnedCoins} GOLD & MANA! GOAL DONE!`, '#ffd166');
+        this.state.goalProgress = 0;
+        this.state.stageOnIsland = 1;
+      }
       this.setupIslandEncounters();
       this.save();
       return;
@@ -1680,6 +1720,7 @@ class DragonCraftWorld {
       this.state.islandIndex++;
       this.state.maxIsland = Math.max(this.state.maxIsland || 0, this.state.islandIndex);
       this.state.stageOnIsland = 0;
+      this.state.goalProgress = 0;
       this.hero.x = 1;
       this.hero.y = 4;
       this.hero.targetX = 1;
