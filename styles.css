@@ -861,3 +861,14 @@ html, body {
 .pd-row input[type=checkbox]:checked { background: #06d6a0; border-color: #a8ffea; }
 .pd-row input[type=checkbox]:checked::after { transform: translateX(24px); }
 .pd-to { align-self: center; color: #8ea0d6; font-weight: 800; }
+
+/* ---- v4: pager, taming food picker, Minecraft-style touches ---- */
+.pager { display: flex; align-items: center; justify-content: center; gap: 14px; margin: 0 0 12px; font-weight: 900; color: #b8c7f0; }
+.pager .mini-btn { flex: 0 0 auto; min-width: 90px; }
+.pager .mini-btn:disabled { opacity: 0.35; }
+.food-card { max-width: 640px; text-align: center; }
+.food-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; }
+.food-btn { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 12px 8px; border-radius: 4px; border: 3px solid #485b96; border-bottom-width: 6px; background: #2a3358; color: #fff; font-family: var(--font-game); font-weight: 900; cursor: pointer; }
+.food-btn:active { transform: translateY(3px); border-bottom-width: 3px; }
+.food-btn .fi { font-size: 2.2rem; } .food-btn .fn { font-size: 0.85rem; } .food-btn .fc { color: var(--gold); font-size: 0.8rem; }
+.menu-item, .rune-stone-btn, .big-action-btn, .mini-btn { border-radius: 6px; }

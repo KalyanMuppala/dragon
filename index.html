@@ -73,6 +73,7 @@
   <div id="sideMenu" class="side-menu">
     <button class="side-btn" data-tab="hero" aria-label="Choose hero">🧙<span>Hero</span></button>
     <button class="side-btn" data-tab="dragons" aria-label="Dragon book">📖<span>Dragons</span></button>
+    <button class="side-btn" data-tab="food" aria-label="Taming food">🍖<span>Food</span></button>
     <button class="side-btn" data-tab="islands" aria-label="Island map">🗺️<span>Islands</span></button>
     <button class="side-btn" data-tab="badges" aria-label="Badges">🏆<span>Badges</span></button>
   </div>
@@ -83,6 +84,7 @@
       <div class="menu-tabs">
         <button class="menu-tab" data-tab="hero">🧙 Heroes</button>
         <button class="menu-tab" data-tab="dragons">📖 Dragons</button>
+        <button class="menu-tab" data-tab="food">🍖 Food</button>
         <button class="menu-tab" data-tab="islands">🗺️ Islands</button>
         <button class="menu-tab" data-tab="badges">🏆 Badges</button>
         <button id="menuClose" class="menu-close" aria-label="Close">✖</button>
@@ -167,6 +169,16 @@
     </div>
   </div>
 
+  <!-- TAMING: pick a food to feed the wild dragon -->
+  <div id="foodOverlay" class="overlay-screen hidden">
+    <div class="spellforge-card food-card">
+      <h2 id="foodTitle" style="color:var(--gold);font-weight:900;">Feed the dragon</h2>
+      <p id="foodClue" style="color:#b8c7f0;font-weight:800;margin:6px 0 12px;"></p>
+      <div id="foodRow" class="food-row"></div>
+      <button id="foodCancel" class="mini-btn" style="margin-top:12px;">Back</button>
+    </div>
+  </div>
+
   <!-- ==================================================================== -->
   <!-- INTERACTIVE "TAP-TAP-BOOM!" CHEST & SURPRISE UNBOXING                -->
   <!-- ==================================================================== -->
@@ -229,6 +241,7 @@
   <div id="printReport"></div>
 
   <script src="questions.js?v=__V__"></script>
+  <script src="voxel.js?v=__V__"></script>
   <script src="game.js?v=__V__"></script>
   <script src="parent.js?v=__V__"></script>
   <script>

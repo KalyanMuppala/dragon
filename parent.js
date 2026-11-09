@@ -333,7 +333,7 @@ Object.assign(DragonCraftWorld.prototype, {
     const goal = set.dailyGoalQ || 0;
     const limit = set.limitMin ? ` / ${set.limitMin}m limit` : '';
     return `
-      <div class="pd-hero"><b>${esc(st.name)}</b> • Level ${st.level} • ${st.dragons.length}/${DRAGONS.length} dragons • last played ${this.fmtAgo(R.lastPlayed || (st.daily.last ? new Date(st.daily.last).getTime() : 0))}</div>
+      <div class="pd-hero"><b>${esc(st.name)}</b> • Level ${st.level} • ${st.dragons.length}/${DRAGON_TOTAL.toLocaleString()} dragons • last played ${this.fmtAgo(R.lastPlayed || (st.daily.last ? new Date(st.daily.last).getTime() : 0))}</div>
       <div class="pd-cards">
         ${this.kpi(this.fmtMin(today.ms) + `<small>${limit}</small>`, 'Played today')}
         ${this.kpi(goal > 0 ? `${Math.min(today.q, goal)}/${goal}` : String(today.q), goal > 0 ? 'Daily goal (questions)' : 'Questions today')}
@@ -387,15 +387,15 @@ Object.assign(DragonCraftWorld.prototype, {
     const mis = S.mistakes.slice(-12).reverse();
     const reviewBy = {};
     st.review.forEach(r => { const c = KIND_META[r.kind].cat; reviewBy[c] = (reviewBy[c] || 0) + 1; });
-    const islands = Math.min(st.maxIsland + 1, BIOMES.length);
+    const islands = st.maxIsland + 1;
     return `
       <div class="pd-sec">🗓️ Last 28 days <span class="pd-muted">(darker = more play time)</span></div>
       <div class="pd-heat">${heat}</div>
       <div class="pd-sec">🎮 Game progress</div>
       <div class="pd-cards">
         ${this.kpi(st.level, 'Hero level')}
-        ${this.kpi(`${islands} / ${BIOMES.length}`, 'Islands reached')}
-        ${this.kpi(`${st.dragons.length} / ${DRAGONS.length}`, 'Dragons tamed')}
+        ${this.kpi(`${islands}`, 'Islands reached')}
+        ${this.kpi(`${st.dragons.length} / ${DRAGON_TOTAL}`, 'Dragons tamed')}
         ${this.kpi(`${st.gear.length} / ${SURPRISES.length}`, 'Treasures found')}
         ${this.kpi(`${S.sessions || 0}`, 'Play sessions')}
         ${this.kpi(`${this.fmtMin(S.totalMs)}`, 'Total play time')}
@@ -541,7 +541,7 @@ Object.assign(DragonCraftWorld.prototype, {
     const set = st.settings;
     const L = [];
     L.push(`DragonCraft progress report — ${st.name}`);
-    L.push(`Date: ${new Date().toLocaleDateString()}   Level ${st.level}, ${st.dragons.length}/${DRAGONS.length} dragons, ${Math.min(st.maxIsland + 1, BIOMES.length)}/${BIOMES.length} islands`);
+    L.push(`Date: ${new Date().toLocaleDateString()}   Level ${st.level}, ${st.dragons.length}/${DRAGON_TOTAL.toLocaleString()} dragons, ${st.maxIsland + 1} islands reached`);
     L.push('');
     L.push(`Play time: today ${this.fmtMin(R.today.ms)} • last 7 days ${this.fmtMin(R.week.ms)} • all time ${this.fmtMin(st.stats.totalMs)}`);
     L.push(`Active days (last 7): ${R.week.active} • current streak: ${R.streak} day${R.streak === 1 ? '' : 's'}${set.dailyGoalQ ? ` • daily goal met ${R.week.goalDays}/7 days` : ''}`);
@@ -607,7 +607,7 @@ Object.assign(DragonCraftWorld.prototype, {
         <li>Play time: today ${this.fmtMin(R.today.ms)}, last 7 days ${this.fmtMin(R.week.ms)}, all time ${this.fmtMin(st.stats.totalMs)}</li>
         <li>Active days this week: ${R.week.active}/7 • streak: ${R.streak} day(s)</li>
         <li>Questions: ${R.asked} • right on first try: ${R.pct}% • avg ${R.avgS ? R.avgS.toFixed(0) : '–'}s</li>
-        <li>Game: level ${st.level}, ${st.dragons.length}/${DRAGONS.length} dragons, ${Math.min(st.maxIsland + 1, BIOMES.length)}/${BIOMES.length} islands, ${Object.keys(st.achievements).length}/${ACHIEVEMENTS.length} badges</li>
+        <li>Game: level ${st.level}, ${st.dragons.length}/${DRAGON_TOTAL.toLocaleString()} dragons, ${st.maxIsland + 1} islands reached, ${Object.keys(st.achievements).length}/${ACHIEVEMENTS.length} badges</li>
       </ul>
       <h2>Math, English &amp; Science</h2>
       <table><tr><th>Subject</th><th>Questions</th><th>First-try %</th><th>Avg time</th></tr>

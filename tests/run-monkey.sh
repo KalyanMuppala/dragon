@@ -5,7 +5,7 @@ SEED="${1:-1}"; STEPS="${2:-300}"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 CHROME="${CHROME:-/Applications/Google Chrome.app/Contents/MacOS/Google Chrome}"
 TMP="$(mktemp -d)"
-cp "$ROOT"/index.html "$ROOT"/questions.js "$ROOT"/game.js "$ROOT"/parent.js "$ROOT"/styles.css "$ROOT"/manifest.json "$ROOT"/icon-*.png "$TMP"/
+cp "$ROOT"/index.html "$ROOT"/questions.js "$ROOT"/voxel.js "$ROOT"/game.js "$ROOT"/parent.js "$ROOT"/styles.css "$ROOT"/manifest.json "$ROOT"/icon-*.png "$TMP"/
 cp "$ROOT"/tests/monkey.js "$TMP"/
 sed 's#</body>#<script src="monkey.js"></script></body>#' "$TMP/index.html" > "$TMP/monkey.html"
 "$CHROME" --headless=new --disable-gpu --user-data-dir="$TMP/profile" --window-size=1180,820 \

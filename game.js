@@ -149,34 +149,11 @@ const SURPRISES = [
   { id: 'pet_star', name: 'Mini Supernova Orbiting Star', icon: '🌟', type: 'orbit', desc: 'A glowing mini-star orbits your Wizard everywhere you walk!', fact: 'STEM Secret: A neutron star is so dense that 1 teaspoon of it weighs as much as a mountain!' }
 ];
 
-// --- BIOMES / ISLANDS ---
-const BIOME_DEFS = [
-  { title: 'EMERALD VOXEL WOODS', icon: '🌲', top: '#2ec4b6', water: '#0b1d3a', guardId: 'sprout', bossId: 'terra', goal: { kind: 'single', n: 1, icon: '💎', noun: 'Glowing Mana Crystal', focus: 'mixed', short: 'Mine the Mana Crystal' } },
-  { title: 'REDSTONE MAGMA CITADEL', icon: '🌋', top: '#e76f51', water: '#2a080c', guardId: 'magma', bossId: 'volt', goal: { kind: 'collect', n: 3, icon: '🔥', noun: 'Fire Gem', focus: 'math', short: 'Collect 3 Fire Gems (math!)' } },
-  { title: 'CRYSTAL SKY SANCTUARY', icon: '☁️', top: '#4cc9f0', water: '#0f172a', guardId: 'cloud', bossId: 'crystal', goal: { kind: 'collect', n: 3, icon: '☁️', noun: 'Sky Crystal', focus: 'mixed', short: 'Collect 3 Sky Crystals' } },
-  { title: 'OBSIDIAN ENDER KEEP', icon: '🔮', top: '#9b5de5', water: '#090414', guardId: 'shadow', bossId: 'ender', goal: { kind: 'combo', n: 3, icon: '🔮', noun: 'Ender Portal', verb: 'Seal the Ender Portal', focus: 'mixed', short: 'Seal the portal: 3-spell combo' } },
-  { title: 'GOLDEN SAND DUNES', icon: '🏜️', top: '#e9c46a', water: '#2b1d08', guardId: 'sandy', bossId: 'solar', goal: { kind: 'collect', n: 4, icon: '🏺', noun: 'Sun Relic', focus: 'math', short: 'Dig up 4 Sun Relics (math!)' } },
-  { title: 'CORAL REEF LAGOON', icon: '🌊', top: '#38b6c9', water: '#052a3a', guardId: 'coral', bossId: 'bubble', goal: { kind: 'collect', n: 4, icon: '🦪', noun: 'Pearl', focus: 'mixed', short: 'Gather 4 Pearls' } },
-  { title: 'FROZEN GLACIER PEAKS', icon: '❄️', top: '#a8dadc', water: '#0c1f33', guardId: 'frost', bossId: 'aurora', goal: { kind: 'combo', n: 3, icon: '🧊', noun: 'Ice Gate', verb: 'Melt the Ice Gate', focus: 'english', short: 'Melt the gate: 3 word spells (English!)' } },
-  { title: 'MISTY SWAMP HOLLOW', icon: '🐸', top: '#6a994e', water: '#0d1f10', guardId: 'swamp', bossId: 'rune', goal: { kind: 'collect', n: 4, icon: '🍄', noun: 'Glowing Mushroom', focus: 'english', short: 'Pick 4 Mushrooms (English!)' } },
-  { title: 'CANDY CLOUD KINGDOM', icon: '🍭', top: '#ff8fab', water: '#2a0f1d', guardId: 'candy', bossId: 'shock', goal: { kind: 'collect', n: 5, icon: '🍬', noun: 'Candy Gem', focus: 'mixed', short: 'Collect 5 Candy Gems' } },
-  { title: 'CLOCKWORK STEEL FORGE', icon: '⚙️', top: '#8d99ae', water: '#10151c', guardId: 'steel', bossId: 'thunder', goal: { kind: 'combo', n: 4, icon: '⚙️', noun: 'Giant Gear', verb: 'Repair the Giant Gear', focus: 'math', short: 'Repair the gear: 4-spell combo (math!)' } },
-  { title: 'MOONLIT JUNGLE RUINS', icon: '🌴', top: '#40916c', water: '#07170f', guardId: 'jungle', bossId: 'pearl', goal: { kind: 'collect', n: 5, icon: '📜', noun: 'Ancient Rune', focus: 'english', short: 'Find 5 Ancient Runes (English!)' } },
-  { title: 'STARFALL COSMIC ISLE', icon: '⭐', top: '#7b2cbf', water: '#05010f', guardId: 'nebula', bossId: 'phoenix', goal: { kind: 'combo', n: 5, icon: '⭐', noun: 'Star Core', verb: 'Wake the Star Core', focus: 'mixed', short: 'Wake the Star Core: 5-spell combo' } }
-];
-
 function shadeHex(hex, f) {
   const n = parseInt(hex.slice(1), 16);
   const r = Math.round(((n >> 16) & 255) * f), g = Math.round(((n >> 8) & 255) * f), b = Math.round((n & 255) * f);
   return '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join('');
 }
-
-const BIOMES = BIOME_DEFS.map((b, i) => ({
-  ...b,
-  name: `ISLAND ${i + 1} • ${b.title}`,
-  left: shadeHex(b.top, 0.72),
-  right: shadeHex(b.top, 0.5)
-}));
 
 // ============================================================================
 // SHARED HELPERS, SAVE MODEL, FUN FACTS & BADGES
@@ -208,10 +185,6 @@ function esc(s) {
   return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
-
-const BIOME_DECO = ['🌲', '🌋', '☁️', '🌑', '🌵', '🐚', '⛄', '🍄', '🍭', '⚙️', '🌴', '✨'];
-BIOMES.forEach((b, i) => { b.deco = BIOME_DECO[i % BIOME_DECO.length]; });
-const DECOR_SPOTS = [[1, 1], [7, 6], [2, 7], [6, 5], [0, 8], [8, 0], [1, 6], [6, 0], [8, 8], [5, 7], [7, 4], [0, 2]];
 
 const FACTS = [
   'Honey never spoils — edible honey has been found in ancient Egyptian tombs!',
@@ -246,7 +219,7 @@ const ACHIEVEMENTS = [
   { id: 'tame1', icon: '🐲', name: 'Dragon Tamer', desc: 'Tame your first wild dragon', test: g => g.state.dragons.length >= 2 },
   { id: 'tame5', icon: '🐉', name: 'Dragon Keeper', desc: 'Own 5 dragons', test: g => g.state.dragons.length >= 5 },
   { id: 'tame12', icon: '🏆', name: 'Dragon Master', desc: 'Own 12 dragons', test: g => g.state.dragons.length >= 12 },
-  { id: 'tame25', icon: '🌟', name: 'Dragon Legend', desc: 'Own every dragon', test: g => g.state.dragons.length >= DRAGONS.length },
+  { id: 'tame25', icon: '🌟', name: 'Dragon Legend', desc: 'Own 100 dragons', test: g => g.state.dragons.length >= 100 },
   { id: 'isl3', icon: '🧭', name: 'Explorer', desc: 'Reach Island 3', test: g => g.state.maxIsland >= 2 },
   { id: 'isl6', icon: '⛵', name: 'Voyager', desc: 'Reach Island 6', test: g => g.state.maxIsland >= 5 },
   { id: 'isl12', icon: '🌍', name: 'World Traveler', desc: 'Reach Island 12', test: g => g.state.maxIsland >= 11 },
@@ -277,6 +250,8 @@ function defaultSaveState() {
     islandIndex: 0, stageOnIsland: 0, goalProgress: 0, maxIsland: 0,
     dragons: ['ignis'], activeDragonIdx: 0, squad: ['ignis'], dragonLevels: {},
     gear: [], character: 0, charChanged: false,
+    foods: { beef: 3, fish: 3, apple: 3, carrot: 2, honey: 2, melon: 2 },  // taming foods
+    pendingQ: 0,         // 1 while a question is open: closing the app counts as a miss
     qCount: 0,
     skills: {},          // skill name -> { tier 1-5, recent [1/0 ...], seen }
     review: [],          // missed questions to re-ask later: { seed, kind, tier, due, n }
@@ -286,7 +261,7 @@ function defaultSaveState() {
     seenTutorial: false,
     lastBackup: 0,
     settings: { grade: 4, focus: 'balanced', focusSkill: '', dailyGoalQ: 10, limitMin: 0, bedtimeOn: false, bedStart: '20:30', bedEnd: '07:00', breakMin: 25, autoRead: false, music: true },
-    stats: { sessions: 0, totalMs: 0, byCat: {}, daily: {}, log: [], mistakes: [], extra: {}, reviewFixed: 0, feeds: 0, firstPlayed: Date.now() }
+    stats: { sessions: 0, totalMs: 0, byCat: {}, daily: {}, log: [], mistakes: [], extra: {}, reviewFixed: 0, feeds: 0, penalties: 0, tamed: 0, firstPlayed: Date.now() }
   };
 }
 
@@ -384,7 +359,7 @@ function normalizeSave(raw) {
   s.achievements = ach;
   // dragon levels: known dragons only
   const dl = {};
-  Object.entries(s.dragonLevels).forEach(([id, v]) => { if (DRAGONS.some(d => d.id === id) && v && typeof v === 'object') dl[id] = { lvl: clamp(Math.round(fin(v.lvl, 1)), 1, 10), xp: nn(v.xp) }; });
+  Object.entries(s.dragonLevels).forEach(([id, v]) => { if (isDragonId(id) && v && typeof v === 'object') dl[id] = { lvl: clamp(Math.round(fin(v.lvl, 1)), 1, 10), xp: nn(v.xp) }; });
   s.dragonLevels = dl;
   s.recentSigs = s.recentSigs.filter(x => typeof x === 'string').slice(-14);
   const sk = {};
@@ -397,7 +372,7 @@ function normalizeSave(raw) {
   s.review = s.review.filter(r => r && ALL_KINDS.includes(r.kind) && Number.isFinite(r.seed)).slice(-12);
 
   // dragons / squad / gear
-  s.dragons = [...new Set(s.dragons.filter(id => DRAGONS.some(x => x.id === id)))];
+  s.dragons = [...new Set(s.dragons.filter(id => isDragonId(id)))];
   if (!s.dragons.length) s.dragons = ['ignis'];
   if (!Array.isArray(r.squad)) s.squad = []; // saves from before squads existed: rebuild from owned dragons
   let sq = Array.isArray(s.squad) ? s.squad.filter(id => s.dragons.includes(id)) : [];
@@ -407,6 +382,10 @@ function normalizeSave(raw) {
   }
   s.squad = [...new Set(sq)].slice(0, 3);
   s.gear = s.gear.filter(id => SURPRISES.some(g => g.id === id));
+  const fd = {};
+  FOOD_IDS.forEach(id => { fd[id] = clamp(Math.floor(nn(obj(r.foods)[id])), 0, 999); });
+  s.foods = r.foods && typeof r.foods === 'object' ? fd : d.foods;
+  s.pendingQ = s.pendingQ ? 1 : 0;
   s.v = 3;
   return s;
 }
@@ -463,7 +442,7 @@ class DragonCraftWorld {
 
     // Battle state
     this.battle = {
-      enemy: DRAGONS[1],
+      enemy: getDragon('sprout'),
       enemyHp: 100,
       enemyMaxHp: 100,
       heroHp: 100,
@@ -492,6 +471,13 @@ class DragonCraftWorld {
       if (document.visibilityState === 'hidden') this.pauseQuestionClock('hidden'); else this.resumeQuestionClock('hidden');
     });
     this.bindEvents();
+    this.announceDimension();
+    if (this.state.pendingQ) { // the game was closed in the middle of a question: that counts as a miss
+      this.state.pendingQ = 0;
+      const pen = this.applyPenalty();
+      this.save();
+      this.toast(`⚠️ A question was left unanswered: -${pen.lossC}⭐ -${pen.lossX} XP`, 5000);
+    }
     this.updateHUD();
     this.refreshTitle();
     this.checkAchievements();
@@ -560,7 +546,7 @@ class DragonCraftWorld {
       { x: 7, y: 2 }  // Stage 2: Island Boss Dragon & Mystery Chest
     ];
 
-    const biome = BIOMES[this.state.islandIndex % BIOMES.length];
+    const biome = biomeAt(this.state.islandIndex);
     const goal = biome.goal;
     const prog = this.state.goalProgress || 0;
     // Waypoint pool for "collect" goals (rotated per island so each island feels different)
@@ -584,6 +570,10 @@ class DragonCraftWorld {
 
     const s = Math.min(2, this.state.stageOnIsland || 0);
     this.currentTarget = stageTargets[s];
+    if (!this.layout || this.layout.idx !== this.state.islandIndex) {
+      this.layout = islandLayout(this.state.islandIndex, this.gridSize, [...this.goldenPath, ...pool]);
+      this.layout.idx = this.state.islandIndex;
+    }
     this.updateHUD();
   }
 
@@ -616,15 +606,11 @@ class DragonCraftWorld {
   }
 
   announceDragonLevel(id, lvl) {
-    const d = DRAGONS.find(x => x.id === id);
+    const d = getDragon(id);
     sfx.chestExplode();
     this.toast(`🐉 <b>${esc(d ? d.name.split(' ')[0] : 'Your dragon')}</b> reached Level ${lvl}! +${lvl * 6}% spell power`, 3600);
   }
 
-  whereIs(id) {
-    const i = BIOMES.findIndex(b => b.guardId === id || b.bossId === id);
-    return i < 0 ? 'Starter dragon' : `Find me: ${BIOMES[i].icon} Island ${i + 1}`;
-  }
 
   drawOn(canvas, fn) {
     const old = this.ctx;
@@ -674,23 +660,30 @@ class DragonCraftWorld {
         this.previewChar = null;
       }));
     } else if (this.menuTab === 'dragons') {
-      const owned = DRAGONS.filter(d => this.state.dragons.includes(d.id)).length;
-      body.innerHTML = `<div class="menu-note">Dragon Book: ${owned} / ${DRAGONS.length} found — tame wild dragons on every island! Equip up to 3 to follow you (${this.state.squad.length}/3 equipped).</div><div class="menu-grid">` +
-        DRAGONS.map(d => {
-          const has = this.state.dragons.includes(d.id);
+      const PER = 12;
+      const ownedList = [...this.state.dragons].sort((x, y) => dragonIdx(x) - dragonIdx(y));
+      const pages = Math.max(1, Math.ceil(ownedList.length / PER));
+      this.bookPage = clamp(this.bookPage || 0, 0, pages - 1);
+      const shown = ownedList.slice(this.bookPage * PER, this.bookPage * PER + PER).map(id => getDragon(id));
+      body.innerHTML = `<div class="menu-note">Dragon Book: ${ownedList.length} / ${DRAGON_TOTAL.toLocaleString()} found — feed wild dragons their favourite food to tame them! Equip up to 3 (${this.state.squad.length}/3 equipped).</div>
+        <div class="pager"><button class="mini-btn" data-pg="-1" ${this.bookPage <= 0 ? 'disabled' : ''}>◀ Prev</button><span>Page ${this.bookPage + 1} / ${pages}</span><button class="mini-btn" data-pg="1" ${this.bookPage >= pages - 1 ? 'disabled' : ''}>Next ▶</button></div><div class="menu-grid">` +
+        shown.map(d => {
           const inf = this.dragonInfo(d.id);
-          const eq = has && this.state.squad.includes(d.id);
-          const lead = has && this.leadDragonId() === d.id;
-          return `<div class="menu-item ${has ? '' : 'locked'} ${lead ? 'selected' : ''}" data-id="${d.id}">
+          const eq = this.state.squad.includes(d.id);
+          const lead = this.leadDragonId() === d.id;
+          const ri = rarityInfo(d);
+          return `<div class="menu-item ${lead ? 'selected' : ''}" data-id="${d.id}">
             <canvas width="260" height="240" data-dc="${d.id}"></canvas>
-            <div class="nm">${has ? d.name.split(' ')[0] : '???'}</div>
-            <div class="sub">${has ? `${d.element} • Level ${inf.lvl}${inf.lvl >= 10 ? ' MAX' : ''} • +${inf.lvl * 6}% power` : this.whereIs(d.id)}</div>
-            ${has ? `<div class="bar"><i style="width:${inf.lvl >= 10 ? 100 : Math.round((inf.xp / inf.need) * 100)}%"></i></div>` : ''}
+            <div class="nm">${esc(d.name.split(' ')[0])}</div>
+            <div class="sub"><span style="color:${ri.color}">${ri.name}</span> • ${d.icon} ${esc(d.element)} • Lv ${inf.lvl}${inf.lvl >= 10 ? ' MAX' : ''}</div>
+            <div class="sub goal">Loves ${FOODS[d.food].icon} ${FOODS[d.food].name}</div>
+            <div class="bar"><i style="width:${inf.lvl >= 10 ? 100 : Math.round((inf.xp / inf.need) * 100)}%"></i></div>
             ${lead ? '<div class="tag">LEAD</div>' : eq ? '<div class="tag">FOLLOWING</div>' : ''}
-            ${has ? `<div class="btn-row"><button class="mini-btn" data-act="equip" data-id="${d.id}">${eq ? 'Unequip' : 'Equip'}</button>${eq && !lead ? `<button class="mini-btn gold" data-act="lead" data-id="${d.id}">⭐ Lead</button>` : ''}</div>
-            <div class="btn-row"><button class="mini-btn feed" data-act="feed" data-id="${d.id}" ${inf.lvl >= 10 ? 'disabled' : ''}>${inf.lvl >= 10 ? 'MAX LEVEL' : '🍖 Feed 80⭐'}</button></div>` : ''}</div>`;
+            <div class="btn-row"><button class="mini-btn" data-act="equip" data-id="${d.id}">${eq ? 'Unequip' : 'Equip'}</button>${eq && !lead ? `<button class="mini-btn gold" data-act="lead" data-id="${d.id}">⭐ Lead</button>` : ''}</div>
+            <div class="btn-row"><button class="mini-btn feed" data-act="feed" data-id="${d.id}" ${inf.lvl >= 10 ? 'disabled' : ''}>${inf.lvl >= 10 ? 'MAX LEVEL' : '🍖 Feed 80⭐'}</button></div></div>`;
         }).join('') + '</div><div class="menu-sec">🎒 Treasure Collection</div><div class="gear-row">' +
         SURPRISES.map(g => `<div class="gear-chip ${this.state.gear.includes(g.id) ? '' : 'locked'}">${this.state.gear.includes(g.id) ? g.icon + ' ' + g.name : '🔒 Mystery chest item'}</div>`).join('') + '</div>';
+      body.querySelectorAll('[data-pg]').forEach(btn => btn.addEventListener('click', () => { this.bookPage += Number(btn.dataset.pg); sfx.coin(); this.renderMenu(); }));
       body.querySelectorAll('.mini-btn').forEach(btn => btn.addEventListener('click', e => {
         e.stopPropagation();
         const id = btn.dataset.id;
@@ -721,8 +714,7 @@ class DragonCraftWorld {
         sfx.coin(); this.checkAchievements(); this.save(); this.renderMenu();
       }));
       body.querySelectorAll('canvas[data-dc]').forEach(cv => previews.push(() => {
-        const d = DRAGONS.find(x => x.id === cv.dataset.dc);
-        const has = this.state.dragons.includes(d.id);
+        const d = getDragon(cv.dataset.dc);
         this.drawOn(cv, () => {
           this.ctx.translate(130, 170);
           this.drawDragonSprite(0, 0, d, t, 1.9, false);
@@ -735,21 +727,42 @@ class DragonCraftWorld {
           const t = this.state.achievements[a.id];
           return `<div class="menu-item ${t ? '' : 'locked'}"><div class="island-big">${t ? a.icon : '🔒'}</div><div class="nm">${esc(a.name)}</div><div class="sub">${esc(a.desc)}</div>${t ? `<div class="sub goal">Earned ${new Date(t).toLocaleDateString()}</div>` : ''}</div>`;
         }).join('') + '</div>';
+    } else if (this.menuTab === 'food') {
+      body.innerHTML = `<div class="menu-note">🍖 Taming Foods — every dragon has a favourite! Read the clue in battle and feed it the right food. You have ⭐ ${this.state.coins}. Winning battles drops free food too.</div><div class="menu-grid">` +
+        FOOD_IDS.map(id => {
+          const f = FOODS[id];
+          return `<div class="menu-item"><div class="island-big">${f.icon}</div><div class="nm">${f.name}</div><div class="sub">You have: ${this.state.foods[id] || 0}</div><div class="sub goal">A dragon that ${f.clue}</div><div class="btn-row"><button class="mini-btn gold" data-buy="${id}">Buy ${f.price}⭐</button></div></div>`;
+        }).join('') + '</div>';
+      body.querySelectorAll('[data-buy]').forEach(btn => btn.addEventListener('click', e => {
+        e.stopPropagation();
+        const f = FOODS[btn.dataset.buy];
+        if (this.state.coins < f.price) { sfx.wrongTry(); this.toast('Not enough ⭐ yet — answer questions to earn coins!'); return; }
+        this.state.coins -= f.price;
+        this.state.foods[btn.dataset.buy] = Math.min(999, (this.state.foods[btn.dataset.buy] || 0) + 1);
+        sfx.coin(); this.save(); this.updateHUD(); this.renderMenu();
+      }));
     } else {
-      const base = Math.floor(this.state.islandIndex / BIOMES.length) * BIOMES.length;
-      body.innerHTML = `<div class="menu-note">Pick an island to sail to! Beat each island's boss to unlock the next. Switching restarts that island's quest.</div><div class="menu-grid">` +
-        BIOMES.map((b, i) => {
-          const unlocked = base + i <= this.state.maxIsland;
-          const here = base + i === this.state.islandIndex;
-          return `<div class="menu-item ${unlocked ? '' : 'locked'} ${here ? 'selected' : ''}" data-i="${i}">
+      const maxBlock = Math.floor((this.state.maxIsland || 0) / ISLANDS_PER_DIM);
+      if (this.islandPage == null) this.islandPage = Math.floor(this.state.islandIndex / ISLANDS_PER_DIM);
+      this.islandPage = clamp(this.islandPage, 0, maxBlock + 1);
+      const base = this.islandPage * ISLANDS_PER_DIM;
+      const dim = DIMS[dimOfIsland(base)];
+      body.innerHTML = `<div class="menu-note">${dim.icon} <b>${dim.name}</b> — islands ${base + 1}–${base + ISLANDS_PER_DIM}. Beat each island's boss to open the next. New dimensions keep appearing forever!</div>
+        <div class="pager"><button class="mini-btn" data-pg="-1" ${this.islandPage <= 0 ? 'disabled' : ''}>◀ Back</button><span>${dim.icon} Dimension ${this.islandPage + 1}</span><button class="mini-btn" data-pg="1" ${this.islandPage >= maxBlock + 1 ? 'disabled' : ''}>Next ▶</button></div><div class="menu-grid">` +
+        Array.from({ length: ISLANDS_PER_DIM }, (_, k) => {
+          const idx = base + k, b = biomeAt(idx);
+          const unlocked = idx <= this.state.maxIsland;
+          const here = idx === this.state.islandIndex;
+          return `<div class="menu-item ${unlocked ? '' : 'locked'} ${here ? 'selected' : ''}" data-i="${idx}">
             <div class="island-big">${unlocked ? b.icon : '🔒'}</div>
-            <div class="nm">${i + 1}. ${b.title}</div>
+            <div class="nm">${idx + 1}. ${esc(b.title)}</div>
             <div class="sub">${unlocked ? (here ? 'You are here' : 'Tap to sail!') : 'Beat the previous boss'}</div>
-            <div class="sub goal">${b.goal.icon} ${b.goal.short}</div>
+            <div class="sub goal">${b.goal.icon} ${esc(b.goal.short)}</div>
             ${here ? '<div class="tag">HERE</div>' : ''}</div>`;
         }).join('') + '</div>';
+      body.querySelectorAll('[data-pg]').forEach(btn => btn.addEventListener('click', () => { this.islandPage += Number(btn.dataset.pg); sfx.coin(); this.renderMenu(); }));
       body.querySelectorAll('.menu-item:not(.locked)').forEach(el => el.addEventListener('click', () => {
-        const target = base + Number(el.dataset.i);
+        const target = Number(el.dataset.i);
         if (target !== this.state.islandIndex) {
           this.state.islandIndex = target;
           this.state.stageOnIsland = 0;
@@ -758,6 +771,7 @@ class DragonCraftWorld {
           this.hero.y = this.hero.targetY = 4;
           this.hero.trail = [];
           this.setupIslandEncounters();
+          this.announceDimension();
           sfx.spellCharge();
         }
         this.save();
@@ -846,14 +860,14 @@ class DragonCraftWorld {
     return { asked, first };
   }
 
-  recordAnswer(abandoned = false) {
+  recordAnswer(abandoned = false, missed = false) {
     const ch = this.activeChallenge;
     if (!ch || ch.recorded) return;
     ch.recorded = true;
     const st = this.state, S = st.stats;
-    const wrong = this.qWrong || 0;
+    const wrong = missed ? 1 : (this.qWrong || 0);
     const firstTry = !abandoned && wrong === 0;
-    const tries = wrong + (abandoned ? 0 : 1);
+    const tries = missed ? 1 : wrong + (abandoned ? 0 : 1);
     const ms = Math.min(120000, Math.round(performance.now() - (this.qStart || performance.now())));
 
     const c = S.byCat[ch.cat] || (S.byCat[ch.cat] = { subj: ch.subj, asked: 0, first: 0, tries: 0, ms: 0 });
@@ -1216,9 +1230,8 @@ class DragonCraftWorld {
     document.getElementById('btnCastSpell').addEventListener('click', () => {
       this.openSpellForge('ATTACK');
     });
-    document.getElementById('btnTameDragon').addEventListener('click', () => {
-      this.openSpellForge('TAME');
-    });
+    document.getElementById('btnTameDragon').addEventListener('click', () => this.openFoodPicker());
+    document.getElementById('foodCancel').addEventListener('click', () => document.getElementById('foodOverlay').classList.add('hidden'));
 
     // 3-Tap Chest Canvas Interaction
     document.getElementById('chestCanvas').addEventListener('pointerdown', () => {
@@ -1234,7 +1247,7 @@ class DragonCraftWorld {
   }
 
   updateHUD() {
-    const biome = BIOMES[this.state.islandIndex % BIOMES.length];
+    const biome = biomeAt(this.state.islandIndex);
     document.getElementById('hudLevelStar').textContent = this.state.level;
     document.getElementById('hudHeroName').textContent = this.state.name;
     document.getElementById('hudCoins').textContent = `⭐ ${this.state.coins}`;
@@ -1248,7 +1261,7 @@ class DragonCraftWorld {
     }
 
     const activeId = this.leadDragonId();
-    const dObj = DRAGONS.find(d => d.id === activeId) || DRAGONS[0];
+    const dObj = getDragon(activeId);
     document.getElementById('hudDragonText').textContent = `${dObj.name.split(' ')[0]} Lv${this.dragonInfo(activeId).lvl} (${this.state.squad.length}/3)`;
     const sm = document.getElementById('sideMenu');
     if (sm) sm.classList.toggle('hidden', this.mode !== 'WORLD');
@@ -1641,55 +1654,98 @@ class DragonCraftWorld {
 
   renderWorld(time, W, H) {
     const ctx = this.ctx;
-    const biome = BIOMES[this.state.islandIndex % BIOMES.length];
+    const biome = biomeAt(this.state.islandIndex);
 
-    // Sky / Ocean Backdrop
-    const bgGrad = ctx.createRadialGradient(W / 2, H * 0.35, 50, W / 2, H / 2, W * 0.8);
-    bgGrad.addColorStop(0, '#1e2c5e');
+    // Sky backdrop for this dimension
+    const bgGrad = ctx.createLinearGradient(0, 0, 0, H);
+    bgGrad.addColorStop(0, biome.sky);
     bgGrad.addColorStop(1, biome.water);
     ctx.fillStyle = bgGrad;
     ctx.fillRect(0, 0, W, H);
 
-    // Drifting ambient embers
+    if (biome.stars) {
+      ctx.fillStyle = '#ffffff';
+      for (let k = 0; k < 60; k++) {
+        const r0 = hashInt(k, 99);
+        ctx.globalAlpha = 0.35 + 0.55 * Math.abs(Math.sin(time * 0.002 + k));
+        ctx.fillRect((r0 % 1000) / 1000 * W, ((r0 >>> 10) % 1000) / 1000 * H * 0.8, 3, 3);
+      }
+      ctx.globalAlpha = 1;
+    }
+    if (biome.clouds) { // blocky drifting clouds
+      ctx.fillStyle = 'rgba(255,255,255,0.8)';
+      for (let k = 0; k < 6; k++) {
+        const cx = ((time * 0.012 * (0.5 + (k % 3) * 0.4) + k * 260) % (W + 300)) - 150;
+        const cy = H * (0.08 + (k * 0.11) % 0.5);
+        ctx.fillRect(cx, cy, 90, 18); ctx.fillRect(cx + 16, cy - 14, 54, 16); ctx.fillRect(cx + 30, cy + 18, 60, 12);
+      }
+    }
+
+    // Drifting ambient particles (embers, snow, sparkles by dimension)
     this.ambientEmbers.forEach(e => {
       e.y += e.vy;
       if (e.y < 0) e.y = H;
       ctx.fillStyle = e.color;
-      ctx.beginPath();
-      ctx.arc(e.x, e.y, e.r, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.fillRect(e.x, e.y, e.r * 1.6, e.r * 1.6);
     });
 
-    // Draw Isometric 9x9 Voxel Island Tiles (Back-to-Front painter's algorithm)
-    for (let gx = 0; gx < this.gridSize; gx++) {
-      for (let gy = 0; gy < this.gridSize; gy++) {
-        const isGolden = this.goldenPath.some(p => p.x === gx && p.y === gy);
-        const isTarget = this.currentTarget && this.currentTarget.x === gx && this.currentTarget.y === gy;
-        const wave = Math.sin(time * 0.003 + (gx + gy) * 0.5) * 0.08;
-
-        let topCol = biome.top;
-        let leftCol = biome.left;
-        let rightCol = biome.right;
-
-        if (isGolden) {
-          topCol = isTarget ? '#ffee32' : '#ffd166';
-          leftCol = '#d9822b';
-          rightCol = '#a35814';
-        }
-
-        this.drawIsoBlock(gx, gy, wave, 26, topCol, leftCol, rightCol, isTarget);
-
-        // Island-themed decorations (trees, cacti, mushrooms, candy...) on a few off-path tiles
-        if (!isGolden && DECOR_SPOTS.some(p => p[0] === gx && p[1] === gy)) {
-          const dp = this.isoToScreen(gx, gy, 0.5 + wave);
-          ctx.save();
-          ctx.font = `${Math.round(40 * this.scale)}px sans-serif`;
-          ctx.textAlign = 'center';
-          ctx.fillText(biome.deco, dp.x, dp.y - 2 * this.scale);
-          ctx.restore();
+    // Floating-island underside (stone layers that taper down)
+    const L = this.layout;
+    const sc = this.scale;
+    const gridN = this.gridSize;
+    const lvlAt = (x, y) => {
+      const gx = clamp(Math.round(x), 0, gridN - 1), gy = clamp(Math.round(y), 0, gridN - 1);
+      return L.fluid[gx][gy] ? -0.35 : L.h[gx][gy] * 0.45;
+    };
+    for (let d = 3; d >= 1; d--) {
+      for (let gx = d; gx < gridN - d; gx++) {
+        for (let gy = d; gy < gridN - d; gy++) {
+          const p = this.isoToScreen(gx, gy, -d * 0.72);
+          vxBox(ctx, p.x, p.y, 38 * sc, 26 * sc, shadeHex(biome.dirt, 0.6 - d * 0.08), shadeHex(biome.dirt, 0.5 - d * 0.07), shadeHex(biome.dirt, 0.36 - d * 0.05));
         }
       }
     }
+
+    // Draw the isometric voxel island (back-to-front painter's algorithm)
+    const decoAt = {};
+    L.decos.forEach(d => { decoAt[d.x * 100 + d.y] = d; });
+    for (let gx = 0; gx < gridN; gx++) {
+      for (let gy = 0; gy < gridN; gy++) {
+        const isGolden = this.goldenPath.some(p => p.x === gx && p.y === gy);
+        const isTarget = this.currentTarget && this.currentTarget.x === gx && this.currentTarget.y === gy;
+        const wave = Math.sin(time * 0.003 + (gx + gy) * 0.5) * 0.06;
+        const seed = hashInt(gx * 9 + gy, this.state.islandIndex);
+
+        if (L.fluid[gx][gy]) { // water / lava pool, or a hole in the void
+          if (biome.fluid === 'void') continue;
+          const p = this.isoToScreen(gx, gy, -0.35 + wave);
+          const lava = biome.fluid === 'lava';
+          const pulse = 0.5 + 0.5 * Math.sin(time * 0.004 + gx * 1.3 + gy);
+          const top = lava ? shadeHex('#ff5a1f', 0.85 + 0.3 * pulse) : shadeHex('#2f7fe0', 0.85 + 0.25 * pulse);
+          vxBox(ctx, p.x, p.y, 38 * sc, 10 * sc, top, shadeHex(top, 0.7), shadeHex(top, 0.5), { seed });
+          if (lava) { ctx.save(); ctx.globalAlpha = 0.25 * pulse; ctx.fillStyle = '#ffd166'; ctx.fillRect(p.x - 14 * sc, p.y - 4 * sc, 28 * sc, 8 * sc); ctx.restore(); }
+          continue;
+        }
+
+        const lvl = L.h[gx][gy];
+        const p = this.isoToScreen(gx, gy, wave + lvl * 0.45);
+        const depth = (26 + lvl * 16) * sc;
+        if (isGolden) {
+          const top = isTarget ? '#ffee32' : '#ffd166';
+          vxBox(ctx, p.x, p.y, 38 * sc, depth, top, '#d9822b', '#a35814', { seed });
+        } else {
+          vxBox(ctx, p.x, p.y, 38 * sc, depth, biome.top, shadeHex(biome.dirt, 0.95), shadeHex(biome.dirt, 0.7), { seed, cap: biome.top });
+        }
+        if (isTarget) {
+          ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2.5;
+          ctx.beginPath(); ctx.moveTo(p.x, p.y - 19 * sc); ctx.lineTo(p.x + 38 * sc, p.y); ctx.lineTo(p.x, p.y + 19 * sc); ctx.lineTo(p.x - 38 * sc, p.y); ctx.closePath(); ctx.stroke();
+        }
+
+        const dc = decoAt[gx * 100 + gy];
+        if (dc && !isGolden) vxDeco(ctx, dc.kind, p.x, p.y, sc, dc.v, time);
+      }
+    }
+    this.heroLift = (this.heroLift || 0) + (lvlAt(this.hero.x, this.hero.y) - (this.heroLift || 0)) * 0.2;
 
     // Draw Current Curated Objective Marker + Pulsing Golden Arrow!
     if (this.currentTarget) {
@@ -1723,7 +1779,7 @@ class DragonCraftWorld {
         ctx.restore();
       } else {
         // Wild Dragon or Boss Dragon waiting on the island!
-        const bossDragon = DRAGONS.find(d => d.id === (this.state.stageOnIsland === 2 ? biome.bossId : biome.guardId)) || DRAGONS[1];
+        const bossDragon = getDragon(this.state.stageOnIsland === 2 ? biome.bossId : biome.guardId);
         this.drawDragonSprite(tp.x, tp.y - 10, bossDragon, time, (this.state.stageOnIsland === 2 ? 1.15 : 0.9) * this.scale, true);
       }
 
@@ -1749,15 +1805,15 @@ class DragonCraftWorld {
 
     // Draw Flying Dragon Followers behind the Hero!
     this.state.squad.forEach((dId, idx) => {
-      const dObj = DRAGONS.find(d => d.id === dId) || DRAGONS[0];
+      const dObj = getDragon(dId);
       const trailStep = Math.min(this.hero.trail.length - 1, (idx + 1) * 8);
       const pos = this.hero.trail[trailStep] || { x: this.hero.x - 0.7 * (idx + 1), y: this.hero.y };
-      const sp = this.isoToScreen(pos.x, pos.y, 0.65);
+      const sp = this.isoToScreen(pos.x, pos.y, 0.65 + (this.heroLift || 0));
       this.drawDragonSprite(sp.x - 18 * this.scale, sp.y, dObj, time + idx * 400, 0.72 * this.scale, false);
     });
 
     // Draw Player Wizard Hero
-    const hp = this.isoToScreen(this.hero.x, this.hero.y, 0.4);
+    const hp = this.isoToScreen(this.hero.x, this.hero.y, 0.4 + (this.heroLift || 0));
     this.drawWizardSprite(hp.x, hp.y, time, 1.05 * this.scale);
   }
 
@@ -1766,11 +1822,10 @@ class DragonCraftWorld {
   // ==========================================================================
   startDragonBattle(isBoss) {
     this.mode = 'BATTLE';
-    const biome = BIOMES[this.state.islandIndex % BIOMES.length];
-    const enemyDragon = DRAGONS.find(d => d.id === (isBoss ? biome.bossId : biome.guardId)) || DRAGONS[2];
+    const biome = biomeAt(this.state.islandIndex);
+    const enemyDragon = getDragon(isBoss ? biome.bossId : biome.guardId);
 
-    const loop = Math.floor(this.state.islandIndex / BIOMES.length);
-    const hpMult = Math.pow(1.2, loop) * (1 + 0.06 * (this.state.islandIndex % BIOMES.length));
+    const hpMult = (1 + 0.05 * Math.min(60, this.state.islandIndex)) * rarityInfo(enemyDragon).hp;
 
     this.battle = {
       enemy: enemyDragon,
@@ -1784,7 +1839,10 @@ class DragonCraftWorld {
       heroFlash: 0,
       busy: false,
       over: false,
-      isBoss
+      isBoss,
+      tame: 0,
+      tameNeed: rarityInfo(enemyDragon).need + (isBoss ? 20 : 0),
+      lastFood: ''
     };
 
     sfx.spellCharge();
@@ -1805,9 +1863,10 @@ class DragonCraftWorld {
     const ctx = this.ctx;
 
     // Dramatic Arcane Arena Sky
-    const grad = ctx.createRadialGradient(W / 2, H * 0.4, 40, W / 2, H / 2, W * 0.75);
-    grad.addColorStop(0, '#3c096c');
-    grad.addColorStop(1, '#090c1c');
+    const bz = biomeAt(this.state.islandIndex);
+    const grad = ctx.createLinearGradient(0, 0, 0, H);
+    grad.addColorStop(0, shadeHex(bz.sky, 0.7));
+    grad.addColorStop(1, bz.water);
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, W, H);
 
@@ -1825,8 +1884,8 @@ class DragonCraftWorld {
     ctx.stroke();
 
     // Right Enemy Floating Voxel Platform
-    ctx.fillStyle = '#781d09';
-    ctx.strokeStyle = '#ef476f';
+    ctx.fillStyle = shadeHex(bz.top, 0.6);
+    ctx.strokeStyle = bz.top;
     ctx.beginPath();
     ctx.ellipse(rightX, platY + 25, 135, 38, 0, 0, Math.PI * 2);
     ctx.fill();
@@ -1834,7 +1893,7 @@ class DragonCraftWorld {
 
     // Draw Hero + Lead Companion Dragon on Left Platform
     const leadId = this.leadDragonId();
-    const leadDragon = DRAGONS.find(d => d.id === leadId) || DRAGONS[0];
+    const leadDragon = getDragon(leadId);
     this.drawWizardSprite(leftX - 55, platY + 8, time, 1.35);
     this.drawDragonSprite(leftX + 35, platY - 12, leadDragon, time, 1.35, false);
 
@@ -1845,6 +1904,18 @@ class DragonCraftWorld {
     // Draw Floating Overhead Health Bars
     this.drawOverheadHealthBar(ctx, leftX, platY - 155, `${this.state.name} & ${leadDragon.name.split(' ')[0]}`, this.battle.heroHp, this.battle.heroMaxHp, '#06d6a0');
     this.drawOverheadHealthBar(ctx, rightX, platY - 155, `${this.battle.isBoss ? '👑 BOSS: ' : ''}${this.battle.enemy.name}`, this.battle.enemyHp, this.battle.enemyMaxHp, '#ef476f');
+
+    // Trust meter (taming progress) under the enemy's health bar
+    if (!this.state.dragons.includes(this.battle.enemy.id) || this.battle.tame > 0) {
+      const bt = this.battle, tw = 200, tx = rightX - tw / 2, ty = platY - 155 + 46;
+      ctx.save();
+      ctx.fillStyle = 'rgba(9,13,26,0.85)'; ctx.fillRect(tx - 6, ty - 18, tw + 12, 36);
+      ctx.fillStyle = '#ffffff'; ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(`💗 TRUST ${Math.round(bt.tame)} / ${bt.tameNeed} — loves ${FOODS[bt.enemy.food].icon}?`, rightX, ty - 4);
+      ctx.fillStyle = '#2a1f3a'; ctx.fillRect(tx, ty + 2, tw, 9);
+      ctx.fillStyle = '#ff5d8f'; ctx.fillRect(tx, ty + 2, tw * Math.min(1, bt.tame / bt.tameNeed), 9);
+      ctx.restore();
+    }
 
     // Animated Dragon Fire / Laser Beam during Spell Attack!
     if (this.battle.laserAnim > 0) {
@@ -1931,14 +2002,16 @@ class DragonCraftWorld {
     this.qStart = performance.now();
     this.qWrong = 0;
     this.forgeLocked = false;
+    this.state.pendingQ = 1; // if the app is closed before answering, it counts as a miss
+    this.save();
 
-    const biomeNow = BIOMES[this.state.islandIndex % BIOMES.length];
+    const biomeNow = biomeAt(this.state.islandIndex);
     const ch = this.nextChallenge(actionType === 'CRYSTAL' ? biomeNow.goal.focus : 'mixed');
     this.activeChallenge = ch;
 
     document.getElementById('forgeTopicBadge').textContent = ch.topic;
     document.getElementById('forgeReviewBadge').classList.toggle('hidden', !ch.review);
-    document.getElementById('forgeStreakText').textContent = `🔥 Combo: ${this.state.streak}x`;
+    document.getElementById('forgeStreakText').textContent = actionType === 'TAME' && this.tameFood ? `${FOODS[this.tameFood].icon} Feeding ${FOODS[this.tameFood].name}` : `🔥 Combo: ${this.state.streak}x`;
     document.getElementById('forgeSkill').textContent = `${ch.cat} • Level ${ch.tier} ${'⭐'.repeat(ch.tier)}`;
 
     const pass = document.getElementById('forgePassage');
@@ -1982,51 +2055,86 @@ class DragonCraftWorld {
     this.stopSpeaking();
   }
 
+  // Wrong answers cost something real. Saved immediately, so closing the game can't undo it.
+  applyPenalty() {
+    const st = this.state;
+    const lossC = Math.min(st.coins, 20);
+    const lossX = Math.min(st.xp, 15);
+    st.coins -= lossC;
+    st.xp -= lossX;
+    const id = this.leadDragonId();
+    const dl = st.dragonLevels && st.dragonLevels[id];
+    let lossD = 0;
+    if (dl && dl.lvl < 10) { lossD = Math.min(dl.xp, 10); dl.xp -= lossD; }
+    st.stats.penalties = (st.stats.penalties || 0) + 1;
+    st.streak = 1;
+    return { lossC, lossX, lossD };
+  }
+
   handleRuneChoice(btn, val) {
     const ch = this.activeChallenge;
     if (!ch || this.forgeLocked || btn.disabled) return;
+    // The FIRST tap is the answer. Every other rune goes dead at once, so several fast taps can never both count.
+    this.forgeLocked = true;
+    const all = [...document.querySelectorAll('.rune-stone-btn')];
+    all.forEach(b => { b.disabled = true; });
     const tipEl = document.getElementById('forgeHelperTip');
+    const ok = String(val) === String(ch.correct);
+    this.state.pendingQ = 0;
 
-    if (String(val) === String(ch.correct)) {
-      this.forgeLocked = true; // stops double-taps from counting twice
+    if (ok) {
       btn.classList.add('correct');
-      document.querySelectorAll('.rune-stone-btn').forEach(b => { if (b !== btn) b.disabled = true; });
-      const first = this.qWrong === 0;
+      this.qWrong = 0;
       this.recordAnswer(false);
       sfx.spellCharge();
       this.state.streak++;
-      tipEl.textContent = first
-        ? ['Perfect! ⭐', 'Brilliant! ✨', 'Spot on! 🎯', 'You nailed it! 💪'][Math.floor(Math.random() * 4)]
-        : 'Nice work — you figured it out! 🌟';
+      tipEl.textContent = ['Perfect! ⭐', 'Brilliant! ✨', 'Spot on! 🎯', 'You nailed it! 💪'][Math.floor(Math.random() * 4)];
       tipEl.classList.add('ok');
       tipEl.classList.remove('hidden');
       if (this.mode === 'BATTLE' && this.battle) { this.battle.busy = true; this.updateDock(); }
-
+      this.save();
       setTimeout(() => {
         this.closeForge();
         this.executeSuccessfulSpell();
       }, 650);
-    } else {
-      // Zero-shame instant scaffold: keep the card open so they can see the hint and try again
-      btn.classList.add('wrong');
-      btn.disabled = true;
-      this.qWrong = (this.qWrong || 0) + 1;
-      this.state.streak = 1;
-      sfx.wrongTry();
-      tipEl.classList.remove('hidden', 'ok');
-      const S = this.state.stats;
-      S.mistakes.push({ t: Date.now(), cat: ch.cat, subj: ch.subj, q: (ch.passage ? '[reading] ' : '') + ch.prompt.slice(0, 140), picked: String(val), correct: String(ch.correct), island: this.state.islandIndex + 1 });
-      if (S.mistakes.length > 150) S.mistakes.shift();
-
-      if (this.mode === 'BATTLE' && this.battle) {
-        this.battle.heroHp = Math.max(0, this.battle.heroHp - 15);
-        this.battle.enemyAnim = 28;
-        this.battle.heroFlash = 14;
-        this.triggerScreenShake(8, 10);
-        this.spawnFloatText(this.vw * 0.27, this.vh * 0.62 - 80, '💥 -15 HP', '#ef476f');
-        if (this.battle.heroHp <= 0) this.handleHeroNaps();
-      }
+      return;
     }
+
+    // Wrong: show the right answer, take the penalty, and the spell fizzles
+    btn.classList.add('wrong');
+    const right = all.find(b => b.dataset.val === String(ch.correct));
+    if (right) right.classList.add('correct');
+    this.qWrong = 1;
+    const S = this.state.stats;
+    S.mistakes.push({ t: Date.now(), cat: ch.cat, subj: ch.subj, q: (ch.passage ? '[reading] ' : '') + ch.prompt.slice(0, 140), picked: String(val), correct: String(ch.correct), island: this.state.islandIndex + 1 });
+    if (S.mistakes.length > 150) S.mistakes.shift();
+    this.recordAnswer(false, true);
+    const pen = this.applyPenalty();
+    sfx.wrongTry();
+    const lost = [pen.lossC ? `-${pen.lossC}⭐` : '', pen.lossX ? `-${pen.lossX} XP` : '', pen.lossD ? `-${pen.lossD} dragon XP` : ''].filter(Boolean).join('  ');
+    tipEl.textContent = `Not quite — the answer was ${ch.correct}. ${lost ? lost : ''} 💡 ${ch.hint}`;
+    tipEl.classList.remove('hidden', 'ok');
+    this.updateHUD();
+    this.save();
+
+    const b = this.battle;
+    const inBattle = this.mode === 'BATTLE' && b;
+    if (inBattle) {
+      b.busy = true; this.updateDock();
+      b.heroHp = Math.max(0, b.heroHp - 15);
+      b.enemyAnim = 28;
+      b.heroFlash = 14;
+      if (this.pendingAction === 'TAME') b.tame = Math.max(0, b.tame - 20);
+      this.triggerScreenShake(8, 10);
+      this.spawnFloatText(this.vw * 0.27, this.vh * 0.62 - 80, '💥 -15 HP', '#ef476f');
+    }
+    setTimeout(() => {
+      this.closeForge();
+      if (this.mode === 'WORLD') this.nextForgeAt = performance.now() + 1500;
+      if (inBattle && this.battle === b) {
+        if (b.heroHp <= 0) this.handleHeroNaps(); else { b.busy = false; this.updateDock(); }
+      }
+    }, 2200);
   }
 
   handleHeroNaps() {
@@ -2034,10 +2142,65 @@ class DragonCraftWorld {
     this.spawnFloatText(this.vw / 2, this.vh / 2 - 40, '💤 Dragon naps — try again!', '#ffd166');
     this.battle.heroHp = this.battle.heroMaxHp;
     this.battle.busy = false;
-    this.forgeLocked = true;
-    if (this.activeChallenge && !this.activeChallenge.recorded) this.recordAnswer(true);
-    this.closeForge();
     this.updateDock();
+  }
+
+  dropFoods(b) {
+    if (!b) return;
+    const e = b.enemy, got = [];
+    for (let k = 0; k < (b.isBoss ? 2 : 1); k++) {
+      const id = Math.random() < 0.5 ? e.food : FOOD_IDS[Math.floor(Math.random() * FOOD_IDS.length)];
+      this.state.foods[id] = Math.min(999, (this.state.foods[id] || 0) + 1);
+      got.push(FOODS[id].icon);
+    }
+    this.toast(`🍖 Food dropped: ${got.join(' ')}`, 2600);
+  }
+
+  announceDimension() {
+    const b = biomeAt(this.state.islandIndex);
+    const key = b.dimIdx + ':' + b.lap;
+    const first = this._lastDimKey == null;
+    this._lastDimKey = key;
+    this.ambientEmbers.forEach((e, i) => { e.color = b.amb[i % b.amb.length]; });
+    if (!first) this.toast(`${b.dimIcon} <b>${esc(b.dim)}</b> — ${esc(b.title)}`, 3200);
+  }
+
+  // ---- Taming: pick a food, then answer a question to win the dragon's trust ----
+  openFoodPicker() {
+    const b = this.battle;
+    if (this.mode !== 'BATTLE' || !b || b.busy || b.over) return;
+    if (this.state.dragons.includes(b.enemy.id)) {
+      this.toast(`🐉 ${esc(b.enemy.name.split(' ')[0])} is already in your Dragon Book — cast spells to beat it!`, 3200);
+      return;
+    }
+    const have = FOOD_IDS.filter(id => (this.state.foods[id] || 0) > 0);
+    if (!have.length) {
+      sfx.wrongTry();
+      this.toast('🍖 No food left! Win battles for drops or buy some in the Food menu.', 4200);
+      return;
+    }
+    const e = b.enemy;
+    document.getElementById('foodTitle').textContent = `Feed ${e.name.split(' ')[0]} — trust ${Math.round(b.tame)} / ${b.tameNeed}`;
+    document.getElementById('foodClue').textContent = `${rarityInfo(e).name} ${e.icon} ${e.element} dragon. It ${FOODS[e.food].clue}.`;
+    const row = document.getElementById('foodRow');
+    row.textContent = '';
+    have.forEach(id => {
+      const f = FOODS[id];
+      const btn = document.createElement('button');
+      btn.className = 'food-btn';
+      btn.innerHTML = `<span class="fi">${f.icon}</span><span class="fn">${esc(f.name)}</span><span class="fc">x${this.state.foods[id]}</span>`;
+      btn.addEventListener('click', () => {
+        if (!(this.state.foods[id] > 0) || b.busy) return;
+        this.state.foods[id]--;
+        this.tameFood = id;
+        b.lastFood = id;
+        document.getElementById('foodOverlay').classList.add('hidden');
+        this.save();
+        this.openSpellForge('TAME');
+      });
+      row.appendChild(btn);
+    });
+    document.getElementById('foodOverlay').classList.remove('hidden');
   }
 
   executeSuccessfulSpell() {
@@ -2052,7 +2215,7 @@ class DragonCraftWorld {
     if (dragonUp) this.announceDragonLevel(this.leadDragonId(), dragonUp);
 
     if (this.pendingAction === 'CRYSTAL') {
-      const goal = BIOMES[this.state.islandIndex % BIOMES.length].goal;
+      const goal = biomeAt(this.state.islandIndex).goal;
       sfx.laserBlast();
       this.triggerScreenShake(12, 14);
       const tp = this.isoToScreen(this.currentTarget.x, this.currentTarget.y, 0.5);
@@ -2080,17 +2243,25 @@ class DragonCraftWorld {
 
     if (this.pendingAction === 'TAME') {
       const enemyId = b.enemy.id;
-      if (!this.state.dragons.includes(enemyId)) {
-        this.state.dragons.push(enemyId);
-        this.equipNew(enemyId);
-        this.spawnFloatText(rightX, platY - 90, `🐉 TAMED ${b.enemy.name.toUpperCase()}!`, '#00f5d4');
-      } else {
-        this.state.coins += 50;
-        this.spawnFloatText(rightX, platY - 90, `🐉 ${b.enemy.name.split(' ')[0]} is already in your book! +50⭐`, '#00f5d4');
+      const m = foodMatch(b.enemy, this.tameFood);
+      const gain = m === 2 ? 45 : m === 1 ? 25 : 8;
+      b.tame = Math.min(b.tameNeed, b.tame + gain);
+      const verdict = m === 2 ? '😍 FAVOURITE!' : m === 1 ? '🙂 Tasty!' : '😐 Meh...';
+      this.spawnFloatText(rightX, platY - 90, `${verdict} +${gain} trust`, m === 2 ? '#00f5d4' : '#ffd166');
+      this.spawnBurst(rightX, platY - 30, m === 2 ? '#ff5d8f' : '#ffd166', m === 2 ? 40 : 14);
+      sfx.coin();
+      if (b.tame >= b.tameNeed) {
+        if (!this.state.dragons.includes(enemyId)) {
+          this.state.dragons.push(enemyId);
+          this.state.stats.tamed = (this.state.stats.tamed || 0) + 1;
+          this.equipNew(enemyId);
+        }
+        this.spawnFloatText(rightX, platY - 130, `🐉 TAMED ${b.enemy.name.split(' ')[0].toUpperCase()}!`, '#00f5d4');
+        sfx.chestExplode();
+        this.spawnBurst(rightX, platY - 30, '#00f5d4', 55);
+        b.enemyHp = 0;
+        b.tamedNow = true;
       }
-      sfx.chestExplode();
-      this.spawnBurst(rightX, platY - 30, '#00f5d4', 45);
-      b.enemyHp = 0;
     } else {
       // Fire Dragon Laser Attack!
       sfx.laserBlast();
@@ -2134,16 +2305,15 @@ class DragonCraftWorld {
     this.battle.busy = false;
     this.battle.over = false;
     this.updateDock();
+    this.dropFoods(this.battle);
 
     if (this.state.stageOnIsland === 1) {
       this.state.stageOnIsland = 2;
       this.setupIslandEncounters();
       this.openInteractiveChest('🎁 GUARDIAN VICTORY CHEST!', 'You defeated the Bridge Guardian!');
     } else {
-      if (this.state.islandIndex % BIOMES.length === BIOMES.length - 1) {
-        this.openInteractiveChest('🎉 FINAL REALM CELEBRATION CHEST!', 'You conquered all 12 realms! Now looping into Master Islands with +20% stronger dragons!');
-      } else if (this.state.islandIndex >= BIOMES.length) {
-        this.openInteractiveChest('👑 MASTER REALM MYSTERY CHEST!', `You conquered the looping island realm! (+20% Enemy HP loop active)`);
+      if (this.state.islandIndex % ISLANDS_PER_DIM === ISLANDS_PER_DIM - 1) {
+        this.openInteractiveChest('🌌 DIMENSION CONQUERED!', `You cleared all ${ISLANDS_PER_DIM} islands of ${biomeAt(this.state.islandIndex).dim}! A portal opens to a NEW dimension…`);
       } else {
         this.openInteractiveChest('👑 ISLAND BOSS MYSTERY CHEST!', `You conquered the Island and reached a new realm!`);
       }
@@ -2156,6 +2326,7 @@ class DragonCraftWorld {
       this.hero.targetX = 1;
       this.hero.targetY = 4;
       this.setupIslandEncounters();
+      this.announceDimension();
     }
     this.checkAchievements();
     this.save();
@@ -2189,25 +2360,37 @@ class DragonCraftWorld {
   openInteractiveChest(headline, subtext, forcedReward) {
     // Pick an unowned gear surprise or dragon!
     const unownedGear = SURPRISES.filter(g => !this.state.gear.includes(g.id));
-    const unownedDragons = DRAGONS.filter(d => !this.state.dragons.includes(d.id));
-
     let reward;
+    const rollDragon = () => {
+      const biome = biomeAt(this.state.islandIndex);
+      for (let k = 0; k < 40; k++) {
+        const n = DRAGONS.length + Math.floor(Math.random() * (DRAGON_TOTAL - DRAGONS.length));
+        const d = getDragon('x' + n);
+        if (!this.state.dragons.includes(d.id) && d.rarity <= 2 && (k > 25 || biome.elems.includes(d.element))) return d;
+      }
+      return null;
+    };
+    const rolled = !forcedReward && !unownedGear.length && Math.random() < 0.3 ? rollDragon() : null;
     if (forcedReward) {
       reward = forcedReward;
     } else if (unownedGear.length > 0) {
       const g = unownedGear[0];
       this.state.gear.push(g.id);
       reward = { icon: g.icon, name: g.name, desc: g.desc, fact: g.fact };
-    } else if (unownedDragons.length > 0) {
-      const d = unownedDragons[Math.floor(Math.random() * unownedDragons.length)];
+    } else if (rolled) {
+      const d = rolled;
       this.state.dragons.push(d.id);
       this.equipNew(d.id);
       reward = {
         icon: '🐉',
         name: `New Dragon: ${d.name}`,
-        desc: `${d.name} now flies behind you on every island!`,
+        desc: `${d.name} (${rarityInfo(d).name}) now flies behind you on every island!`,
         fact: 'STEM Secret: Flying creatures have hollow, lightweight bones to soar through the sky!'
       };
+    } else if (Math.random() < 0.6) {
+      const id = FOOD_IDS[Math.floor(Math.random() * FOOD_IDS.length)];
+      this.state.foods[id] = Math.min(999, (this.state.foods[id] || 0) + 3);
+      reward = { icon: FOODS[id].icon, name: `3 x ${FOODS[id].name}!`, desc: 'Taming food for your next wild dragon!', fact: this.randomFact() };
     } else {
       this.state.coins += 250;
       reward = {

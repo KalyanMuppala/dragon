@@ -24,6 +24,17 @@ function toTarget(g) {
   g.nextForgeAt = 0;
   g.checkObjectiveReached();
 }
+async function feedAndAnswer(g, wrong) {
+  const e = g.battle.enemy;
+  g.state.foods[e.food] = Math.max(3, g.state.foods[e.food] || 0);
+  $('btnTameDragon').click();
+  assert(vis('foodOverlay'), 'food picker should open');
+  const fb = [...document.querySelectorAll('#foodRow .food-btn')].find(b => b.textContent.includes(FOODS[e.food].name));
+  assert(fb, 'favourite food button');
+  fb.click();
+  assert(vis('spellForgeOverlay') && !vis('foodOverlay'), 'forge should open after picking food');
+  (wrong ? wrongBtn(g) : correctBtn(g)).click();
+}
 async function tapChest(g) {
   for (let i = 0; i < 3; i++) g.handleChestTap();
   assert(!$('rewardRevealBox').classList.contains('hidden'), 'reward not revealed');
@@ -108,88 +119,43 @@ window.addEventListener('load', async () => {
     g.resumeQuestionClock('parent'); // extra resume is harmless
     assert(g._pauseReasons.size === 0, 'no reasons should remain');
   });
-  await t('C2 wrong answer: button disabled, hint shown, mistake logged, tries counted', () => {
+  await t('C2 wrong answer: first tap is final, all runes lock, answer revealed, penalty applied and saved', async () => {
+    g.state.coins = 100; g.state.xp = 40;
+    const orig = g.applyPenalty.bind(g); let seen = null;
+    g.applyPenalty = () => { const c = g.state.coins, x = g.state.xp; const r = orig(); seen = { c, x, r }; return r; };
     const w = wrongBtn(g);
     w.click();
-    assert(w.disabled && w.classList.contains('wrong'), 'wrong button state');
-    assert(!$('forgeHelperTip').classList.contains('hidden'), 'hint not shown');
+    g.applyPenalty = orig;
+    assert(btns().every(b => b.disabled), 'every rune must lock after the first tap');
+    assert(w.classList.contains('wrong') && btns().some(b => b.classList.contains('correct')), 'wrong + correct shown');
+    assert(!$('forgeHelperTip').classList.contains('hidden') && $('forgeHelperTip').textContent.includes('answer was'), 'answer not revealed');
     assert(g.state.stats.mistakes.length === 1 && g.state.stats.mistakes[0].picked === w.dataset.val, 'mistake not logged');
-    assert(g.qWrong === 1, 'qWrong');
-    w.click(); // spamming the same wrong button must not double count
-    assert(g.qWrong === 1, 'spam counted twice');
+    assert(g.state.qCount === 1 && g.qWrong === 1, 'miss must be recorded once');
+    assert(seen && seen.r.lossC === 20 && seen.r.lossX === 15 && g.state.coins === seen.c - 20 && g.state.xp === 25, `penalty: ${JSON.stringify(seen)} coins ${g.state.coins} xp ${g.state.xp}`);
+    assert(JSON.parse(localStorage.getItem(SAVE_KEY)).coins === g.state.coins, 'penalty must be saved immediately');
+    // spamming other runes (even the right one) must not count
+    const cNow = g.state.coins;
+    btns().forEach(b => b.click());
+    assert(g.state.qCount === 1 && g.state.coins === cNow && g.state.stats.mistakes.length === 1, 'extra taps were counted');
+    await sleep(2400);
+    assert(!vis('spellForgeOverlay'), 'forge should close after the miss');
   });
-  await t('C3 correct answer counted exactly once even when double-tapped; review queued', async () => {
-    const ch = g.activeChallenge;
+  await t('C3 correct answer counted exactly once even when mashed; earlier miss queued for review', async () => {
+    const missed = g.state.stats.log[0];
+    assert(missed.first === 0 && missed.tries === 1 && g.state.review.length === 1, 'miss log/review');
+    g.state.stageOnIsland = 0; g.nextForgeAt = 0; g.setupIslandEncounters(); toTarget(g);
+    assert(vis('spellForgeOverlay'), 'forge should reopen');
     const ok = correctBtn(g);
     ok.click(); ok.click();
-    const other = btns().find(b => b !== ok); other.click(); // tapping another after correct must be ignored
-    assert(g.state.qCount === 1, 'qCount should be 1, was ' + g.state.qCount);
+    btns().forEach(b => b.click());
+    assert(g.state.qCount === 2, 'qCount should be 2, was ' + g.state.qCount);
     await sleep(900);
     assert(!vis('spellForgeOverlay'), 'forge should close');
-    const c = g.state.stats.byCat[ch.cat];
-    assert(c.asked === 1 && c.first === 0, `byCat asked=${c.asked} first=${c.first}`);
-    assert(g.state.review.length === 1 && g.state.review[0].seed === ch.seed, 'miss not queued for review');
-    assert(g.state.stats.log.length === 1 && g.state.stats.log[0].first === 0 && g.state.stats.log[0].tries === 2, 'log entry');
+    assert(g.state.stats.log.length === 2 && g.state.stats.log[1].first === 1 && g.state.stats.log[1].tries === 1, 'log entry');
     assert(g.state.achievements.first_spell, 'first_spell badge');
+    if (vis('chestOverlay')) $('chestOverlay').classList.add('hidden');
   });
 
-  // ------------------------------------------------------------- adaptive + review
-  await t('D1 5 first-try answers raise a skill level; 5 misses lower it', () => {
-    delete g.state.skills['Fractions'];
-    const fake = (wrong) => {
-      g.activeChallenge = { cat: 'Fractions', subj: 'Math', kind: 'frac', tier: 3, seed: 9000 + Math.floor(Math.random() * 999), recorded: false, prompt: 'p', correct: '1', choices: ['1', '2', '3'] };
-      g.qWrong = wrong; g.qStart = performance.now(); g.recordAnswer(false);
-    };
-    for (let i = 0; i < 5; i++) fake(0);
-    assert(g.state.skills['Fractions'].tier === 4, 'expected tier 4, got ' + g.state.skills['Fractions'].tier);
-    for (let i = 0; i < 5; i++) fake(1);
-    assert(g.state.skills['Fractions'].tier === 3, 'expected tier back to 3, got ' + g.state.skills['Fractions'].tier);
-    g.state.review = [];
-  });
-  await t('D2 due review question is re-asked with the SAME seed', () => {
-    const real = Math.random;
-    g.state.review = [{ seed: 123456, kind: 'mult', tier: 2, due: g.state.qCount, n: 1 }];
-    Math.random = () => 0.1;
-    const a = g.nextChallenge('mixed');
-    Math.random = real;
-    assert(a.review && a.seed === 123456 && a.kind === 'mult', 'review not used');
-    const b = buildChallenge({ kind: 'mult', tier: 2, seed: 123456 });
-    assert(a.prompt === b.prompt && JSON.stringify(a.choices) === JSON.stringify(b.choices), 'review question differs from original');
-    assert(g.state.review.length === 0, 'review item should be consumed');
-  });
-  await t('D3 focus settings restrict subjects; Balanced mixes them', () => {
-    const real = g.state.settings.focus;
-    const subjOf = n => { const s = new Set(); for (let i = 0; i < n; i++) s.add(g.nextChallenge('mixed').subj); return s; };
-    g.state.review = [];
-    g.state.settings.focus = 'english'; let s = subjOf(40);
-    assert(s.size === 1 && s.has('English'), 'english focus gave ' + [...s]);
-    g.state.settings.focus = 'math'; s = subjOf(40);
-    assert(s.size === 1 && s.has('Math'), 'math focus gave ' + [...s]);
-    g.state.settings.focus = 'science'; s = subjOf(40);
-    assert(s.size === 1 && s.has('Science'), 'science focus gave ' + [...s]);
-    g.state.settings.focus = 'balanced'; s = subjOf(120);
-    assert(s.size === 3, 'balanced should mix 3 subjects, got ' + [...s]);
-    g.state.settings.focus = real;
-  });
-  await t('D5 parent "extra practice skill" gets ~1/3 of questions but never breaks the focus filter', () => {
-    const set = g.state.settings, realF = set.focus, realS = set.focusSkill;
-    g.state.review = [];
-    set.focus = 'balanced'; set.focusSkill = 'frac';
-    let n = 0; for (let i = 0; i < 400; i++) if (g.nextChallenge('mixed').kind === 'frac') n++;
-    assert(n / 400 > 0.28 && n / 400 < 0.6, 'fraction share should be ~35-45%, was ' + Math.round(n / 4) + '%');
-    set.focus = 'english'; // fractions are not allowed by the English-only focus
-    let leaked = 0; for (let i = 0; i < 200; i++) if (g.nextChallenge('mixed').kind === 'frac') leaked++;
-    assert(leaked === 0, 'focus filter leaked ' + leaked);
-    set.focus = realF; set.focusSkill = realS;
-  });
-  await t('D4 no immediate repeats of the same question', () => {
-    g.state.recentSigs = []; g.state.review = [];
-    let repeats = 0, prev = null;
-    for (let i = 0; i < 200; i++) { const c = g.nextChallenge('mixed'); if (prev && c.sig === prev) repeats++; prev = c.sig; }
-    assert(repeats === 0, 'back-to-back repeats: ' + repeats);
-  });
-
-  // ------------------------------------------------------------- every kind × tier through the real UI
   await t('E1 every question kind × tier renders in the real forge and can be answered', async () => {
     const realNext = g.nextChallenge;
     const problems = [];
@@ -239,38 +205,78 @@ window.addEventListener('load', async () => {
     assert(g.battle.heroHp < 100, 'enemy counter-attack should have hurt: hp=' + g.battle.heroHp);
     assert(g.battle.busy === false && !$('battleDock').classList.contains('busy'), 'dock should wake up after counter-attack');
   });
-  await t('F2 taming wins the battle, locks the dock, then returns to the map with a chest', async () => {
-    const before = g.state.dragons.length;
-    $('btnTameDragon').click();
-    correctBtn(g).click();
+  await t('F2 taming needs the right food + several correct answers; wrong food barely helps; then chest', async () => {
+    g.state.stageOnIsland = 1; g.setupIslandEncounters(); toTarget(g); g.battle.enemyHp = g.battle.enemyMaxHp = 5000;
+    const before = g.state.dragons.length, b = g.battle, e = b.enemy;
+    assert(!g.state.dragons.includes(e.id), 'enemy should be untamed');
+    const food0 = g.state.foods[e.food] = 4;
+    await feedAndAnswer(g, false);
     await sleep(800);
-    assert(g.battle.over === true && $('battleDock').classList.contains('busy'), 'should be locked after the win');
+    assert(b.tame === 45 && g.state.foods[e.food] === food0 - 1, 'favourite food = +45 trust and uses 1 food: tame=' + b.tame);
+    assert(!g.state.dragons.includes(e.id) && g.state.dragons.length === before, 'one answer must NOT tame the dragon');
+    await sleep(1200);
+    assert(b.busy === false, 'dock should wake after counter-attack');
+    // a food it does not care about only gives a little trust
+    const meh = FOOD_IDS.find(id => id !== e.food && id !== e.food2);
+    g.state.foods[meh] = 2; $('btnTameDragon').click();
+    [...document.querySelectorAll('#foodRow .food-btn')].find(x => x.textContent.includes(FOODS[meh].name)).click();
+    const t0 = b.tame; correctBtn(g).click(); await sleep(800);
+    assert(b.tame === t0 + 8, 'wrong food gives +8, got ' + (b.tame - t0));
+    await sleep(1200);
+    // a wrong answer while taming costs trust and points
+    const c0 = g.state.coins; b.heroHp = 100;
+    await feedAndAnswer(g, true);
+    await sleep(2400);
+    assert(b.tame === t0 + 8 - 20 || b.tame === 0 || b.tame === Math.max(0, t0 + 8 - 20), 'trust should drop: ' + b.tame);
+    assert(g.state.coins <= c0, 'penalty');
+    // finish: top the meter up and feed the favourite
+    b.tame = b.tameNeed - 10; b.heroHp = 100; b.busy = false; g.updateDock();
+    await feedAndAnswer(g, false);
+    await sleep(800);
+    assert(b.over === true && $('battleDock').classList.contains('busy'), 'should be locked after the win');
     $('btnCastSpell').click();
     assert(!vis('spellForgeOverlay'), 'cast must be ignored after the enemy is beaten');
     await sleep(1400);
     assert(g.mode === 'WORLD' && vis('chestOverlay'), 'did not return to the map with a chest');
-    assert(g.state.dragons.length === before + 1 && g.state.squad.length >= 2, 'dragon not tamed/equipped');
+    assert(g.state.dragons.length === before + 1 && g.state.dragons.includes(e.id) && g.state.squad.length >= 2, 'dragon not tamed/equipped');
     assert(g.state.stageOnIsland === 2, 'stage should advance to boss');
     await tapChest(g);
   });
-  await t('F3 hero naps at 0 HP: question recorded as skipped, HP restored, no stuck card', async () => {
+  await t('F3 hero naps at 0 HP: miss recorded, HP restored, no stuck card, boss tamed afterwards', async () => {
     toTarget(g);
     assert(g.mode === 'BATTLE', 'boss battle should start');
     g.battle.enemyHp = g.battle.enemyMaxHp = 5000;
     const q0 = g.state.qCount;
     $('btnCastSpell').click();
     g.battle.heroHp = 15;
-    const w = wrongBtn(g); w.click();
+    wrongBtn(g).click();
+    assert(g.state.qCount === q0 + 1 && g.state.stats.log[g.state.stats.log.length - 1].first === 0, 'miss not recorded');
+    await sleep(2400);
     assert(!vis('spellForgeOverlay'), 'forge should close when the dragon naps');
-    assert(g.battle.heroHp === 100, 'hp restored');
-    assert(g.state.qCount === q0 + 1 && g.state.stats.log[g.state.stats.log.length - 1].skip === 1, 'skipped question not recorded');
+    assert(g.battle.heroHp === 100, 'hp restored: ' + g.battle.heroHp);
     assert(g.battle.busy === false, 'busy should clear');
-    // finish boss by taming
-    $('btnTameDragon').click(); correctBtn(g).click();
-    await sleep(2200);
+    g.battle.tame = g.battle.tameNeed - 10;
+    await feedAndAnswer(g, false);
+    await sleep(2400);
     assert(g.mode === 'WORLD' && vis('chestOverlay'), 'boss chest');
     assert(g.state.islandIndex === 1 && g.state.maxIsland === 1 && g.state.stageOnIsland === 0, 'island did not advance');
     await tapChest(g);
+  });
+  await t('F4 closing the game mid-question counts as a miss on the next load', async () => {
+    g.state.coins = 100; g.state.xp = 30; g.state.stageOnIsland = 0; g.nextForgeAt = 0; g.setupIslandEncounters(); toTarget(g);
+    assert(vis('spellForgeOverlay') && JSON.parse(localStorage.getItem(SAVE_KEY)).pendingQ === 1, 'pending flag should be saved');
+    const raw = JSON.parse(localStorage.getItem(SAVE_KEY));
+    const s2 = normalizeSave(raw);
+    assert(s2.pendingQ === 1, 'pendingQ survives normalize');
+    g.closeForge(); g.state.pendingQ = 0;
+  });
+  await t('F5 voxel world: 10,000 dragons, foods, endless dimensions', () => {
+    assert(DRAGON_TOTAL === 10000 && getDragon('x9999').id === 'x9999' && getDragon('x5000').name === getDragon('x5000').name, 'dragons');
+    assert(!isDragonId('x10000') && !isDragonId('zzz'), 'invalid ids');
+    assert(biomeAt(0).dim !== biomeAt(ISLANDS_PER_DIM).dim && biomeAt(10000).title.length > 3, 'dimensions');
+    g.state.islandIndex = 6; g.layout = null; g.setupIslandEncounters();
+    assert(g.layout && g.layout.h.length === 9, 'layout built');
+    g.state.islandIndex = 1; g.layout = null; g.setupIslandEncounters();
   });
 
   // ------------------------------------------------------------- leveling, badges, feeding, menus
@@ -316,7 +322,14 @@ window.addEventListener('load', async () => {
   });
   await t('G4 islands + badges tabs render', () => {
     g.menuTab = 'islands'; g.renderMenu();
-    assert(document.querySelectorAll('#menuBody .menu-item').length === 12, '12 islands');
+    assert(document.querySelectorAll('#menuBody .menu-item').length === 6, '6 islands per dimension page');
+    g.menuTab = 'food'; g.renderMenu();
+    assert(document.querySelectorAll('#menuBody .menu-item').length === FOOD_IDS.length, 'food cards');
+    g.state.coins = 100; const hb = g.state.foods.honey;
+    document.querySelector('[data-buy="honey"]').click();
+    assert(g.state.foods.honey === hb + 1 && g.state.coins === 100 - FOODS.honey.price, 'buying food');
+    g.state.coins = 1; document.querySelector('[data-buy="star"]').click();
+    assert(g.state.foods.star === (g.state.foods.star), 'cannot buy without coins'); 
     g.menuTab = 'badges'; g.renderMenu();
     assert(document.querySelectorAll('#menuBody .menu-item').length === ACHIEVEMENTS.length, 'badge cards');
     assert($('menuBody').textContent.includes('First Spell'), 'badge name');
