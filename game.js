@@ -473,9 +473,29 @@ class DragonCraftWorld {
   loadSave() {
     try {
       const raw = localStorage.getItem(SAVE_KEY);
-      if (raw) return Object.assign(this.defaultSave(), JSON.parse(raw));
+      if (raw) {
+        const saved = JSON.parse(raw);
+        const st = Object.assign(this.defaultSave(), saved);
+        if (!Array.isArray(saved.squad)) st.squad = []; // old save: rebuild from owned dragons
+        return this.fixSquad(st);
+      }
     } catch (e) {}
     return this.defaultSave();
+  }
+
+  fixSquad(st) {
+    let sq = Array.isArray(st.squad) ? st.squad.filter(id => st.dragons.includes(id)) : [];
+    if (!sq.length) {
+      // old saves: lead first, then others, max 3
+      const lead = st.dragons[(st.activeDragonIdx || 0) % st.dragons.length];
+      sq = [lead, ...st.dragons.filter(id => id !== lead)];
+    }
+    st.squad = [...new Set(sq)].slice(0, 3);
+    return st;
+  }
+
+  equipNew(id) {
+    if (this.state.squad.length < 3 && !this.state.squad.includes(id)) this.state.squad.push(id);
   }
 
   defaultSave() {
@@ -491,6 +511,7 @@ class DragonCraftWorld {
       dragons: ['ignis'],
       activeDragonIdx: 0,
       gear: [], // 'crown_gold', 'wings_aether', 'staff_nether', 'pet_star'
+      squad: ['ignis'], // up to 3 equipped dragons that follow you; squad[0] is the lead
       character: 0,
       maxIsland: 0,
       dragonLevels: {} // id -> { lvl, xp }
@@ -548,7 +569,7 @@ class DragonCraftWorld {
   }
 
   leadDragonId() {
-    return this.state.dragons[this.state.activeDragonIdx % this.state.dragons.length] || 'ignis';
+    return (this.state.squad && this.state.squad[0]) || this.state.dragons[0] || 'ignis';
   }
 
   gainDragonXP(amount) {
@@ -618,22 +639,37 @@ class DragonCraftWorld {
       }));
     } else if (this.menuTab === 'dragons') {
       const owned = DRAGONS.filter(d => this.state.dragons.includes(d.id)).length;
-      body.innerHTML = `<div class="menu-note">Dragon Book: ${owned} / ${DRAGONS.length} found — tame wild dragons to fill it! Tap a dragon to make it your lead.</div><div class="menu-grid">` +
+      body.innerHTML = `<div class="menu-note">Dragon Book: ${owned} / ${DRAGONS.length} found — tame wild dragons to fill it! Equip up to 3 to follow you (${this.state.squad.length}/3 equipped).</div><div class="menu-grid">` +
         DRAGONS.map(d => {
           const has = this.state.dragons.includes(d.id);
           const inf = this.dragonInfo(d.id);
+          const eq = has && this.state.squad.includes(d.id);
           const lead = has && this.leadDragonId() === d.id;
           return `<div class="menu-item ${has ? '' : 'locked'} ${lead ? 'selected' : ''}" data-id="${d.id}">
             <canvas width="260" height="240" data-dc="${d.id}"></canvas>
             <div class="nm">${has ? d.name.split(' ')[0] : '???'}</div>
             <div class="sub">${has ? `${d.element} • Level ${inf.lvl}${inf.lvl >= 10 ? ' MAX' : ''} • +${inf.lvl * 6}% power` : 'Tame me in a battle!'}</div>
             ${has ? `<div class="bar"><i style="width:${inf.lvl >= 10 ? 100 : Math.round((inf.xp / inf.need) * 100)}%"></i></div>` : ''}
-            ${lead ? '<div class="tag">LEAD</div>' : ''}</div>`;
+            ${lead ? '<div class="tag">LEAD</div>' : eq ? '<div class="tag">FOLLOWING</div>' : ''}
+            ${has ? `<div class="btn-row"><button class="mini-btn" data-act="equip" data-id="${d.id}">${eq ? 'Unequip' : 'Equip'}</button>${eq && !lead ? `<button class="mini-btn gold" data-act="lead" data-id="${d.id}">⭐ Lead</button>` : ''}</div>` : ''}</div>`;
         }).join('') + '</div><div class="menu-sec">🎒 Treasure Collection</div><div class="gear-row">' +
         SURPRISES.map(g => `<div class="gear-chip ${this.state.gear.includes(g.id) ? '' : 'locked'}">${this.state.gear.includes(g.id) ? g.icon + ' ' + g.name : '🔒 Mystery chest item'}</div>`).join('') + '</div>';
-      body.querySelectorAll('.menu-item:not(.locked)').forEach(el => el.addEventListener('click', () => {
-        const idx = this.state.dragons.indexOf(el.dataset.id);
-        if (idx >= 0) this.state.activeDragonIdx = idx;
+      body.querySelectorAll('.mini-btn').forEach(btn => btn.addEventListener('click', e => {
+        e.stopPropagation();
+        const id = btn.dataset.id;
+        const sq = this.state.squad;
+        if (btn.dataset.act === 'lead') {
+          this.state.squad = [id, ...sq.filter(x => x !== id)];
+        } else if (sq.includes(id)) {
+          if (sq.length <= 1) { sfx.wrongTry(); return; }
+          this.state.squad = sq.filter(x => x !== id);
+        } else if (sq.length >= 3) {
+          sfx.wrongTry();
+          document.querySelector('.menu-note').textContent = '🐉 Squad is full (3/3)! Unequip a dragon first.';
+          return;
+        } else {
+          sq.push(id);
+        }
         sfx.coin(); this.save(); this.renderMenu();
       }));
       body.querySelectorAll('canvas[data-dc]').forEach(cv => previews.push(() => {
@@ -779,7 +815,8 @@ class DragonCraftWorld {
 
     // Cycle active lead dragon
     document.getElementById('btnSwapDragon').addEventListener('click', () => {
-      this.state.activeDragonIdx = (this.state.activeDragonIdx + 1) % this.state.dragons.length;
+      const sq = this.state.squad;
+      if (sq.length > 1) this.state.squad = [...sq.slice(1), sq[0]];
       sfx.coin();
       this.save();
       this.updateHUD();
@@ -824,9 +861,9 @@ class DragonCraftWorld {
       document.getElementById('questObjectiveText').textContent = `⚔️ Cast STEM Spells to defeat or tame ${this.battle.enemy.name}!`;
     }
 
-    const activeId = this.state.dragons[this.state.activeDragonIdx % this.state.dragons.length] || 'ignis';
+    const activeId = this.leadDragonId();
     const dObj = DRAGONS.find(d => d.id === activeId) || DRAGONS[0];
-    document.getElementById('hudDragonText').textContent = `${dObj.name.split(' ')[0]} Lv${this.dragonInfo(activeId).lvl} (${this.state.dragons.length})`;
+    document.getElementById('hudDragonText').textContent = `${dObj.name.split(' ')[0]} Lv${this.dragonInfo(activeId).lvl} (${this.state.squad.length}/3)`;
     const sm = document.getElementById('sideMenu');
     if (sm) sm.classList.toggle('hidden', this.mode !== 'WORLD');
   }
@@ -1297,7 +1334,7 @@ class DragonCraftWorld {
     }
 
     // Draw Flying Dragon Followers behind the Hero!
-    this.state.dragons.forEach((dId, idx) => {
+    this.state.squad.forEach((dId, idx) => {
       const dObj = DRAGONS.find(d => d.id === dId) || DRAGONS[0];
       const trailStep = Math.min(this.hero.trail.length - 1, (idx + 1) * 8);
       const pos = this.hero.trail[trailStep] || { x: this.hero.x - 0.7 * (idx + 1), y: this.hero.y };
@@ -1374,7 +1411,7 @@ class DragonCraftWorld {
     ctx.stroke();
 
     // Draw Hero + Lead Companion Dragon on Left Platform
-    const leadId = this.state.dragons[this.state.activeDragonIdx % this.state.dragons.length] || 'ignis';
+    const leadId = this.leadDragonId();
     const leadDragon = DRAGONS.find(d => d.id === leadId) || DRAGONS[0];
     this.drawWizardSprite(leftX - 55, platY + 8, time, 1.35);
     this.drawDragonSprite(leftX + 35, platY - 12, leadDragon, time, 1.35, false);
@@ -1540,6 +1577,7 @@ class DragonCraftWorld {
       const enemyId = this.battle.enemy.id;
       if (!this.state.dragons.includes(enemyId)) {
         this.state.dragons.push(enemyId);
+        this.equipNew(enemyId);
       }
       sfx.chestExplode();
       this.spawnBurst(rightX, platY - 30, '#00f5d4', 45);
@@ -1629,6 +1667,7 @@ class DragonCraftWorld {
     } else if (unownedDragons.length > 0) {
       const d = unownedDragons[0];
       this.state.dragons.push(d.id);
+      this.equipNew(d.id);
       reward = {
         icon: '🐉',
         name: `New Dragon: ${d.name}`,

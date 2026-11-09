@@ -652,3 +652,7 @@ html, body {
 .island-big { font-size: 2.6rem; }
 
 .menu-item.locked canvas { filter: brightness(0); }
+
+.btn-row { display: flex; gap: 6px; justify-content: center; margin-top: 8px; }
+.mini-btn { flex: 1; padding: 8px 6px; border-radius: 12px; border: 2px solid #485b96; background: rgba(255,255,255,0.08); color: #fff; font-family: var(--font-game); font-weight: 900; font-size: 0.8rem; cursor: pointer; }
+.mini-btn.gold { background: var(--gold); color: #2b1400; border-color: #fff; }
