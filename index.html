@@ -61,6 +61,26 @@
     </div>
   </div>
 
+  <!-- SIDE MENU: Hero / Dragon Book / Island Map -->
+  <div id="sideMenu" class="side-menu">
+    <button class="side-btn" data-tab="hero" aria-label="Choose hero">🧙<span>Hero</span></button>
+    <button class="side-btn" data-tab="dragons" aria-label="Dragon book">📖<span>Dragons</span></button>
+    <button class="side-btn" data-tab="islands" aria-label="Island map">🗺️<span>Islands</span></button>
+  </div>
+
+  <!-- MENU OVERLAY (Hero / Dragon Book / Islands) -->
+  <div id="menuOverlay" class="overlay-screen hidden">
+    <div class="menu-card">
+      <div class="menu-tabs">
+        <button class="menu-tab" data-tab="hero">🧙 Heroes</button>
+        <button class="menu-tab" data-tab="dragons">📖 Dragon Book</button>
+        <button class="menu-tab" data-tab="islands">🗺️ Islands</button>
+        <button id="menuClose" class="menu-close" aria-label="Close">✖</button>
+      </div>
+      <div id="menuBody" class="menu-body"></div>
+    </div>
+  </div>
+
   <!-- TOUCH CONTROLS: bottom-left thumbstick, bottom-right quest orb -->
   <div id="joystick" class="joystick" aria-label="Move">
     <div id="joystickKnob" class="joystick-knob"></div>

@@ -81,6 +81,16 @@ const DRAGONS = [
   { id: 'ender', name: 'Enderbyte the Quantum Dragon', color: '#7209b7', wing: '#00f5d4', belly: '#ffd166', element: 'Quantum' }
 ];
 
+// --- PLAYABLE HEROES ---
+const CHARACTERS = [
+  { name: 'Leo the Mage', robe: '#7209b7', hat: '#3c096c', skin: '#ffcdb2' },
+  { name: 'Ember the Fire Witch', robe: '#e63946', hat: '#7f1d1d', skin: '#f1c27d' },
+  { name: 'Forest Ranger', robe: '#2d6a4f', hat: '#1b4332', skin: '#d9a066' },
+  { name: 'Frost Knight', robe: '#1d4ed8', hat: '#0f2a6b', skin: '#8d5524' },
+  { name: 'Storm Sage', robe: '#f59e0b', hat: '#92400e', skin: '#ffdbac' },
+  { name: 'Shadow Ninja', robe: '#1f2937', hat: '#111827', skin: '#c68642' }
+];
+
 // --- VISIBLE GEAR & SURPRISES ---
 const SURPRISES = [
   { id: 'crown_gold', name: 'Golden Crown of Equations', icon: '👑', type: 'crown', desc: 'Your Wizard now wears the Golden Royal Crown on screen!', fact: 'STEM Secret: Gold is so malleable that 1 ounce can be beaten into a sheet covering 100 square feet!' },
@@ -463,8 +473,12 @@ class DragonCraftWorld {
   loadSave() {
     try {
       const raw = localStorage.getItem(SAVE_KEY);
-      if (raw) return JSON.parse(raw);
+      if (raw) return Object.assign(this.defaultSave(), JSON.parse(raw));
     } catch (e) {}
+    return this.defaultSave();
+  }
+
+  defaultSave() {
     return {
       name: 'Leo the Dragonborn',
       level: 1,
@@ -476,7 +490,10 @@ class DragonCraftWorld {
       stageOnIsland: 0, // 0: Crystal, 1: Guardian Dragon, 2: Boss Dragon + Chest
       dragons: ['ignis'],
       activeDragonIdx: 0,
-      gear: [] // 'crown_gold', 'wings_aether', 'staff_nether', 'pet_star'
+      gear: [], // 'crown_gold', 'wings_aether', 'staff_nether', 'pet_star'
+      character: 0,
+      maxIsland: 0,
+      dragonLevels: {} // id -> { lvl, xp }
     };
   }
 
@@ -522,7 +539,147 @@ class DragonCraftWorld {
     this.updateHUD();
   }
 
+  // ==========================================================================
+  // DRAGON LEVELS, HERO PICKER, DRAGON BOOK & ISLAND MAP
+  // ==========================================================================
+  dragonInfo(id) {
+    const d = (this.state.dragonLevels && this.state.dragonLevels[id]) || { lvl: 1, xp: 0 };
+    return { lvl: d.lvl || 1, xp: d.xp || 0, need: 50 + 25 * (d.lvl || 1) };
+  }
+
+  leadDragonId() {
+    return this.state.dragons[this.state.activeDragonIdx % this.state.dragons.length] || 'ignis';
+  }
+
+  gainDragonXP(amount) {
+    const id = this.leadDragonId();
+    if (!this.state.dragonLevels) this.state.dragonLevels = {};
+    const info = this.dragonInfo(id);
+    let { lvl, xp } = info;
+    if (lvl >= 10) return;
+    xp += amount;
+    let leveled = false;
+    while (lvl < 10 && xp >= 50 + 25 * lvl) {
+      xp -= 50 + 25 * lvl;
+      lvl++;
+      leveled = true;
+    }
+    this.state.dragonLevels[id] = { lvl, xp };
+    if (leveled) {
+      const dn = DRAGONS.find(d => d.id === id).name.split(' ')[0];
+      sfx.chestExplode();
+      this.spawnFloatText(this.vw * 0.27 + 60, this.vh * 0.62 - 120, `🐉 ${dn} LEVEL ${lvl}! +${lvl * 6}% power`, '#00f5d4');
+    }
+  }
+
+  drawOn(canvas, fn) {
+    const old = this.ctx;
+    this.ctx = canvas.getContext('2d');
+    this.ctx.clearRect(0, 0, canvas.width, canvas.height);
+    try { fn(); } finally { this.ctx = old; }
+  }
+
+  openMenu(tab) {
+    if (this.mode !== 'WORLD') return;
+    if (!document.getElementById('titleOverlay').classList.contains('hidden')) return;
+    if (!document.getElementById('spellForgeOverlay').classList.contains('hidden')) return;
+    if (!document.getElementById('chestOverlay').classList.contains('hidden')) return;
+    this.menuTab = tab || 'hero';
+    this.joy = { x: 0, y: 0, id: null };
+    document.getElementById('menuOverlay').classList.remove('hidden');
+    this.renderMenu();
+  }
+
+  closeMenu() {
+    document.getElementById('menuOverlay').classList.add('hidden');
+    this.previewChar = null;
+    this.updateHUD();
+  }
+
+  renderMenu() {
+    const body = document.getElementById('menuBody');
+    document.querySelectorAll('.menu-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === this.menuTab));
+    const t = performance.now();
+    const previews = [];
+
+    if (this.menuTab === 'hero') {
+      body.innerHTML = '<div class="menu-note">Tap a hero to wear their look! 🎭</div><div class="menu-grid">' +
+        CHARACTERS.map((c, i) => `<div class="menu-item ${i === this.state.character ? 'selected' : ''}" data-i="${i}">
+          <canvas width="260" height="240" data-pc="${i}"></canvas><div class="nm">${c.name}</div>
+          ${i === this.state.character ? '<div class="tag">YOU</div>' : ''}</div>`).join('') + '</div>';
+      body.querySelectorAll('.menu-item').forEach(el => el.addEventListener('click', () => {
+        this.state.character = Number(el.dataset.i);
+        sfx.coin(); this.save(); this.renderMenu();
+      }));
+      body.querySelectorAll('canvas[data-pc]').forEach(cv => previews.push(() => {
+        this.previewChar = Number(cv.dataset.pc);
+        this.drawOn(cv, () => { this.ctx.translate(130, 190); this.drawWizardSprite(0, 0, t, 2.1); });
+        this.previewChar = null;
+      }));
+    } else if (this.menuTab === 'dragons') {
+      const owned = DRAGONS.filter(d => this.state.dragons.includes(d.id)).length;
+      body.innerHTML = `<div class="menu-note">Dragon Book: ${owned} / ${DRAGONS.length} found — tame wild dragons to fill it! Tap a dragon to make it your lead.</div><div class="menu-grid">` +
+        DRAGONS.map(d => {
+          const has = this.state.dragons.includes(d.id);
+          const inf = this.dragonInfo(d.id);
+          const lead = has && this.leadDragonId() === d.id;
+          return `<div class="menu-item ${has ? '' : 'locked'} ${lead ? 'selected' : ''}" data-id="${d.id}">
+            <canvas width="260" height="240" data-dc="${d.id}"></canvas>
+            <div class="nm">${has ? d.name.split(' ')[0] : '???'}</div>
+            <div class="sub">${has ? `${d.element} • Level ${inf.lvl}${inf.lvl >= 10 ? ' MAX' : ''} • +${inf.lvl * 6}% power` : 'Tame me in a battle!'}</div>
+            ${has ? `<div class="bar"><i style="width:${inf.lvl >= 10 ? 100 : Math.round((inf.xp / inf.need) * 100)}%"></i></div>` : ''}
+            ${lead ? '<div class="tag">LEAD</div>' : ''}</div>`;
+        }).join('') + '</div><div class="menu-sec">🎒 Treasure Collection</div><div class="gear-row">' +
+        SURPRISES.map(g => `<div class="gear-chip ${this.state.gear.includes(g.id) ? '' : 'locked'}">${this.state.gear.includes(g.id) ? g.icon + ' ' + g.name : '🔒 Mystery chest item'}</div>`).join('') + '</div>';
+      body.querySelectorAll('.menu-item:not(.locked)').forEach(el => el.addEventListener('click', () => {
+        const idx = this.state.dragons.indexOf(el.dataset.id);
+        if (idx >= 0) this.state.activeDragonIdx = idx;
+        sfx.coin(); this.save(); this.renderMenu();
+      }));
+      body.querySelectorAll('canvas[data-dc]').forEach(cv => previews.push(() => {
+        const d = DRAGONS.find(x => x.id === cv.dataset.dc);
+        const has = this.state.dragons.includes(d.id);
+        this.drawOn(cv, () => {
+          this.ctx.translate(130, 170);
+          this.drawDragonSprite(0, 0, d, t, 1.9, false);
+        });
+      }));
+    } else {
+      const base = Math.floor(this.state.islandIndex / BIOMES.length) * BIOMES.length;
+      const icons = ['🌲', '🌋', '☁️', '🔮'];
+      body.innerHTML = `<div class="menu-note">Pick an island to sail to! Beat each island's boss to unlock the next. Switching restarts that island's quest.</div><div class="menu-grid">` +
+        BIOMES.map((b, i) => {
+          const unlocked = base + i <= this.state.maxIsland;
+          const here = base + i === this.state.islandIndex;
+          return `<div class="menu-item ${unlocked ? '' : 'locked'} ${here ? 'selected' : ''}" data-i="${i}">
+            <div class="island-big">${unlocked ? icons[i] : '🔒'}</div>
+            <div class="nm">${b.name.replace('ISLAND ' + (i + 1) + ' • ', '')}</div>
+            <div class="sub">${unlocked ? (here ? 'You are here' : 'Tap to sail!') : 'Beat the previous boss'}</div>
+            ${here ? '<div class="tag">HERE</div>' : ''}</div>`;
+        }).join('') + '</div>';
+      body.querySelectorAll('.menu-item:not(.locked)').forEach(el => el.addEventListener('click', () => {
+        const target = base + Number(el.dataset.i);
+        if (target !== this.state.islandIndex) {
+          this.state.islandIndex = target;
+          this.state.stageOnIsland = 0;
+          this.hero.x = this.hero.targetX = 1;
+          this.hero.y = this.hero.targetY = 4;
+          this.hero.trail = [];
+          this.setupIslandEncounters();
+          sfx.spellCharge();
+        }
+        this.save();
+        this.closeMenu();
+      }));
+    }
+    previews.forEach(fn => fn());
+  }
+
   bindEvents() {
+    // ---- Side menu (Hero / Dragon Book / Islands) ----
+    document.querySelectorAll('.side-btn').forEach(b => b.addEventListener('click', () => { sfx.init(); sfx.coin(); this.openMenu(b.dataset.tab); }));
+    document.querySelectorAll('.menu-tab').forEach(b => b.addEventListener('click', () => { this.menuTab = b.dataset.tab; sfx.coin(); this.renderMenu(); }));
+    document.getElementById('menuClose').addEventListener('click', () => this.closeMenu());
     // 1-Click Play Button
     const nameInput = document.getElementById('heroNameInput');
     nameInput.value = this.state.name;
@@ -558,6 +715,7 @@ class DragonCraftWorld {
       if (this.mode !== 'WORLD') return;
       if (!document.getElementById('titleOverlay').classList.contains('hidden')) return;
       if (!document.getElementById('spellForgeOverlay').classList.contains('hidden')) return;
+      if (!document.getElementById('menuOverlay').classList.contains('hidden')) return;
 
       const map = {
         ArrowUp: [0, -1], KeyW: [0, -1],
@@ -668,7 +826,9 @@ class DragonCraftWorld {
 
     const activeId = this.state.dragons[this.state.activeDragonIdx % this.state.dragons.length] || 'ignis';
     const dObj = DRAGONS.find(d => d.id === activeId) || DRAGONS[0];
-    document.getElementById('hudDragonText').textContent = `${dObj.name.split(' ')[0]} (${this.state.dragons.length} Following)`;
+    document.getElementById('hudDragonText').textContent = `${dObj.name.split(' ')[0]} Lv${this.dragonInfo(activeId).lvl} (${this.state.dragons.length})`;
+    const sm = document.getElementById('sideMenu');
+    if (sm) sm.classList.toggle('hidden', this.mode !== 'WORLD');
   }
 
   // ==========================================================================
@@ -779,14 +939,15 @@ class DragonCraftWorld {
     }
 
     // Voxel Wizard Robe
-    ctx.fillStyle = '#7209b7';
+    const ch = CHARACTERS[(this.previewChar != null ? this.previewChar : this.state.character) % CHARACTERS.length];
+    ctx.fillStyle = ch.robe;
     ctx.strokeStyle = '#ffd166';
     ctx.lineWidth = 2.5;
     ctx.fillRect(-14, -36 + bob, 28, 34);
     ctx.strokeRect(-14, -36 + bob, 28, 34);
 
     // Voxel Head
-    ctx.fillStyle = '#ffcdb2';
+    ctx.fillStyle = ch.skin;
     ctx.fillRect(-12, -58 + bob, 24, 22);
     ctx.strokeRect(-12, -58 + bob, 24, 22);
 
@@ -810,7 +971,7 @@ class DragonCraftWorld {
       ctx.fill();
       ctx.stroke();
     } else {
-      ctx.fillStyle = '#3c096c';
+      ctx.fillStyle = ch.hat;
       ctx.beginPath();
       ctx.moveTo(-20, -58 + bob);
       ctx.lineTo(20, -58 + bob);
@@ -1389,7 +1550,8 @@ class DragonCraftWorld {
       sfx.laserBlast();
       this.battle.laserAnim = 22;
       this.triggerScreenShake(16, 18);
-      const dmg = 60 + (this.state.gear.includes('staff_nether') ? 35 : 0);
+      const lvl = this.dragonInfo(this.leadDragonId()).lvl;
+      const dmg = Math.round((60 + (this.state.gear.includes('staff_nether') ? 35 : 0)) * (1 + 0.06 * lvl));
       this.battle.enemyHp = Math.max(0, this.battle.enemyHp - dmg);
       this.spawnBurst(rightX, platY - 30, '#ffd166', 38);
       this.spawnFloatText(rightX, platY - 80, `💥 -${dmg} SUPER SPELL!`, '#ffd166');
@@ -1431,6 +1593,7 @@ class DragonCraftWorld {
         this.openInteractiveChest('👑 ISLAND BOSS MYSTERY CHEST!', `You conquered the Island and reached a new realm!`);
       }
       this.state.islandIndex++;
+      this.state.maxIsland = Math.max(this.state.maxIsland || 0, this.state.islandIndex);
       this.state.stageOnIsland = 0;
       this.hero.x = 1;
       this.hero.y = 4;
