@@ -73,12 +73,31 @@ const sfx = new SoundEngine();
 
 // --- DRAGONS ROSTER ---
 const DRAGONS = [
-  { id: 'ignis', name: 'Ignis the Magma Drake', color: '#ef476f', wing: '#ffd166', belly: '#ff9f1c', element: 'Fire' },
-  { id: 'volt', name: 'Voltscale the Redstone Wyvern', color: '#00bbf9', wing: '#fee440', belly: '#a8ffea', element: 'Storm' },
-  { id: 'frost', name: 'Cryowing the Ice Dragon', color: '#4cc9f0', wing: '#e0fbfc', belly: '#90e0ef', element: 'Frost' },
-  { id: 'terra', name: 'Terrahorn the Emerald Drake', color: '#06d6a0', wing: '#ffd166', belly: '#b7efc5', element: 'Earth' },
-  { id: 'nebula', name: 'Nebulon the Starlight Wyrm', color: '#9b5de5', wing: '#f15bb5', belly: '#00f5d4', element: 'Cosmic' },
-  { id: 'ender', name: 'Enderbyte the Quantum Dragon', color: '#7209b7', wing: '#00f5d4', belly: '#ffd166', element: 'Quantum' }
+  { id: 'ignis', name: 'Ignis the Magma Drake', color: '#ef476f', wing: '#ffd166', belly: '#ff9f1c', element: 'Fire', icon: '🔥' },
+  { id: 'sprout', name: 'Sprig the Leaf Drake', color: '#52b788', wing: '#d8f3dc', belly: '#95d5b2', element: 'Nature', icon: '🌿' },
+  { id: 'volt', name: 'Voltscale the Redstone Wyvern', color: '#00bbf9', wing: '#fee440', belly: '#a8ffea', element: 'Storm', icon: '⚡' },
+  { id: 'frost', name: 'Cryowing the Ice Dragon', color: '#4cc9f0', wing: '#e0fbfc', belly: '#90e0ef', element: 'Frost', icon: '❄️' },
+  { id: 'terra', name: 'Terrahorn the Emerald Drake', color: '#06d6a0', wing: '#ffd166', belly: '#b7efc5', element: 'Earth', icon: '⛰️' },
+  { id: 'nebula', name: 'Nebulon the Starlight Wyrm', color: '#9b5de5', wing: '#f15bb5', belly: '#00f5d4', element: 'Cosmic', icon: '⭐' },
+  { id: 'ender', name: 'Enderbyte the Quantum Dragon', color: '#7209b7', wing: '#00f5d4', belly: '#ffd166', element: 'Quantum', icon: '🔮' },
+  { id: 'coral', name: 'Coralina the Reef Dragon', color: '#ff7f6e', wing: '#ffe5d9', belly: '#ffb4a2', element: 'Ocean', icon: '🐚' },
+  { id: 'sandy', name: 'Dune the Sand Serpent', color: '#e9c46a', wing: '#f4a261', belly: '#fff3b0', element: 'Desert', icon: '🏜️' },
+  { id: 'magma', name: 'Moltenjaw the Lava Dragon', color: '#d00000', wing: '#ffba08', belly: '#f48c06', element: 'Lava', icon: '🌋' },
+  { id: 'shock', name: 'Zapwing the Lightning Dragon', color: '#ffd60a', wing: '#ffffff', belly: '#ffee93', element: 'Lightning', icon: '⚡' },
+  { id: 'shadow', name: 'Umbra the Shadow Dragon', color: '#3a3a5c', wing: '#8d99ae', belly: '#2b2d42', element: 'Shadow', icon: '🌑' },
+  { id: 'crystal', name: 'Prismara the Crystal Dragon', color: '#b5179e', wing: '#f72585', belly: '#ffc8dd', element: 'Crystal', icon: '💎' },
+  { id: 'cloud', name: 'Nimbus the Sky Dragon', color: '#8ecae6', wing: '#ffffff', belly: '#caf0f8', element: 'Sky', icon: '☁️' },
+  { id: 'pearl', name: 'Lunara the Moon Dragon', color: '#e0e1dd', wing: '#778da9', belly: '#fefae0', element: 'Moon', icon: '🌙' },
+  { id: 'solar', name: 'Solaris the Sun Dragon', color: '#fb8500', wing: '#ffd166', belly: '#ffe8a3', element: 'Sun', icon: '☀️' },
+  { id: 'swamp', name: 'Bogscale the Swamp Dragon', color: '#588157', wing: '#a3b18a', belly: '#dad7cd', element: 'Swamp', icon: '🐸' },
+  { id: 'rune', name: 'Runeclaw the Ancient Dragon', color: '#6d597a', wing: '#e56b6f', belly: '#eaac8b', element: 'Ancient', icon: '📜' },
+  { id: 'steel', name: 'Ironhide the Metal Dragon', color: '#6c757d', wing: '#ced4da', belly: '#adb5bd', element: 'Metal', icon: '⚙️' },
+  { id: 'candy', name: 'Sugarwing the Candy Dragon', color: '#ff8fab', wing: '#ffc2d1', belly: '#fff0f3', element: 'Candy', icon: '🍭' },
+  { id: 'bubble', name: 'Bubbletail the Water Dragon', color: '#48cae4', wing: '#ade8f4', belly: '#caf0f8', element: 'Water', icon: '💧' },
+  { id: 'jungle', name: 'Vinefang the Jungle Dragon', color: '#2d6a4f', wing: '#95d5b2', belly: '#b7e4c7', element: 'Jungle', icon: '🌴' },
+  { id: 'aurora', name: 'Auroris the Northern Lights Dragon', color: '#7b2cbf', wing: '#00f5d4', belly: '#c77dff', element: 'Aurora', icon: '🌌' },
+  { id: 'thunder', name: 'Rumblehorn the Thunder Dragon', color: '#3a0ca3', wing: '#4cc9f0', belly: '#7209b7', element: 'Thunder', icon: '⛈️' },
+  { id: 'phoenix', name: 'Phoenix the Rebirth Dragon', color: '#ff5400', wing: '#ffbd00', belly: '#ffdd00', element: 'Phoenix', icon: '🪶' }
 ];
 
 // --- PLAYABLE HEROES ---
@@ -100,12 +119,33 @@ const SURPRISES = [
 ];
 
 // --- BIOMES / ISLANDS ---
-const BIOMES = [
-  { name: 'ISLAND 1 • EMERALD VOXEL WOODS', top: '#2ec4b6', left: '#1b9aaa', right: '#0f6b78', water: '#0b1d3a', bossId: 'frost' },
-  { name: 'ISLAND 2 • REDSTONE MAGMA CITADEL', top: '#e76f51', left: '#b5381a', right: '#781d09', water: '#2a080c', bossId: 'volt' },
-  { name: 'ISLAND 3 • CRYSTAL SKY SANCTUARY', top: '#4cc9f0', left: '#3a86ff', right: '#1d4ed8', water: '#0f172a', bossId: 'terra' },
-  { name: 'ISLAND 4 • OBSIDIAN ENDER KEEP', top: '#9b5de5', left: '#6930c3', right: '#3c096c', water: '#090414', bossId: 'ender' }
+const BIOME_DEFS = [
+  { title: 'EMERALD VOXEL WOODS', icon: '🌲', top: '#2ec4b6', water: '#0b1d3a', guardId: 'sprout', bossId: 'terra' },
+  { title: 'REDSTONE MAGMA CITADEL', icon: '🌋', top: '#e76f51', water: '#2a080c', guardId: 'magma', bossId: 'volt' },
+  { title: 'CRYSTAL SKY SANCTUARY', icon: '☁️', top: '#4cc9f0', water: '#0f172a', guardId: 'cloud', bossId: 'crystal' },
+  { title: 'OBSIDIAN ENDER KEEP', icon: '🔮', top: '#9b5de5', water: '#090414', guardId: 'shadow', bossId: 'ender' },
+  { title: 'GOLDEN SAND DUNES', icon: '🏜️', top: '#e9c46a', water: '#2b1d08', guardId: 'sandy', bossId: 'solar' },
+  { title: 'CORAL REEF LAGOON', icon: '🌊', top: '#38b6c9', water: '#052a3a', guardId: 'coral', bossId: 'bubble' },
+  { title: 'FROZEN GLACIER PEAKS', icon: '❄️', top: '#a8dadc', water: '#0c1f33', guardId: 'frost', bossId: 'aurora' },
+  { title: 'MISTY SWAMP HOLLOW', icon: '🐸', top: '#6a994e', water: '#0d1f10', guardId: 'swamp', bossId: 'rune' },
+  { title: 'CANDY CLOUD KINGDOM', icon: '🍭', top: '#ff8fab', water: '#2a0f1d', guardId: 'candy', bossId: 'shock' },
+  { title: 'CLOCKWORK STEEL FORGE', icon: '⚙️', top: '#8d99ae', water: '#10151c', guardId: 'steel', bossId: 'thunder' },
+  { title: 'MOONLIT JUNGLE RUINS', icon: '🌴', top: '#40916c', water: '#07170f', guardId: 'jungle', bossId: 'pearl' },
+  { title: 'STARFALL COSMIC ISLE', icon: '⭐', top: '#7b2cbf', water: '#05010f', guardId: 'nebula', bossId: 'phoenix' }
 ];
+
+function shadeHex(hex, f) {
+  const n = parseInt(hex.slice(1), 16);
+  const r = Math.round(((n >> 16) & 255) * f), g = Math.round(((n >> 8) & 255) * f), b = Math.round((n & 255) * f);
+  return '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join('');
+}
+
+const BIOMES = BIOME_DEFS.map((b, i) => ({
+  ...b,
+  name: `ISLAND ${i + 1} • ${b.title}`,
+  left: shadeHex(b.top, 0.72),
+  right: shadeHex(b.top, 0.5)
+}));
 
 // ============================================================================
 // VISUAL STEM PROBLEM & DIAGRAM GENERATOR (Age 9 / Grade 3-4-5)
@@ -593,6 +633,11 @@ class DragonCraftWorld {
     }
   }
 
+  whereIs(id) {
+    const i = BIOMES.findIndex(b => b.guardId === id || b.bossId === id);
+    return i < 0 ? 'Starter dragon' : `Find me: ${BIOMES[i].icon} Island ${i + 1}`;
+  }
+
   drawOn(canvas, fn) {
     const old = this.ctx;
     this.ctx = canvas.getContext('2d');
@@ -639,7 +684,7 @@ class DragonCraftWorld {
       }));
     } else if (this.menuTab === 'dragons') {
       const owned = DRAGONS.filter(d => this.state.dragons.includes(d.id)).length;
-      body.innerHTML = `<div class="menu-note">Dragon Book: ${owned} / ${DRAGONS.length} found — tame wild dragons to fill it! Equip up to 3 to follow you (${this.state.squad.length}/3 equipped).</div><div class="menu-grid">` +
+      body.innerHTML = `<div class="menu-note">Dragon Book: ${owned} / ${DRAGONS.length} found — tame wild dragons on every island! Equip up to 3 to follow you (${this.state.squad.length}/3 equipped).</div><div class="menu-grid">` +
         DRAGONS.map(d => {
           const has = this.state.dragons.includes(d.id);
           const inf = this.dragonInfo(d.id);
@@ -648,7 +693,7 @@ class DragonCraftWorld {
           return `<div class="menu-item ${has ? '' : 'locked'} ${lead ? 'selected' : ''}" data-id="${d.id}">
             <canvas width="260" height="240" data-dc="${d.id}"></canvas>
             <div class="nm">${has ? d.name.split(' ')[0] : '???'}</div>
-            <div class="sub">${has ? `${d.element} • Level ${inf.lvl}${inf.lvl >= 10 ? ' MAX' : ''} • +${inf.lvl * 6}% power` : 'Tame me in a battle!'}</div>
+            <div class="sub">${has ? `${d.element} • Level ${inf.lvl}${inf.lvl >= 10 ? ' MAX' : ''} • +${inf.lvl * 6}% power` : this.whereIs(d.id)}</div>
             ${has ? `<div class="bar"><i style="width:${inf.lvl >= 10 ? 100 : Math.round((inf.xp / inf.need) * 100)}%"></i></div>` : ''}
             ${lead ? '<div class="tag">LEAD</div>' : eq ? '<div class="tag">FOLLOWING</div>' : ''}
             ${has ? `<div class="btn-row"><button class="mini-btn" data-act="equip" data-id="${d.id}">${eq ? 'Unequip' : 'Equip'}</button>${eq && !lead ? `<button class="mini-btn gold" data-act="lead" data-id="${d.id}">⭐ Lead</button>` : ''}</div>` : ''}</div>`;
@@ -682,14 +727,13 @@ class DragonCraftWorld {
       }));
     } else {
       const base = Math.floor(this.state.islandIndex / BIOMES.length) * BIOMES.length;
-      const icons = ['🌲', '🌋', '☁️', '🔮'];
       body.innerHTML = `<div class="menu-note">Pick an island to sail to! Beat each island's boss to unlock the next. Switching restarts that island's quest.</div><div class="menu-grid">` +
         BIOMES.map((b, i) => {
           const unlocked = base + i <= this.state.maxIsland;
           const here = base + i === this.state.islandIndex;
           return `<div class="menu-item ${unlocked ? '' : 'locked'} ${here ? 'selected' : ''}" data-i="${i}">
-            <div class="island-big">${unlocked ? icons[i] : '🔒'}</div>
-            <div class="nm">${b.name.replace('ISLAND ' + (i + 1) + ' • ', '')}</div>
+            <div class="island-big">${unlocked ? b.icon : '🔒'}</div>
+            <div class="nm">${i + 1}. ${b.title}</div>
             <div class="sub">${unlocked ? (here ? 'You are here' : 'Tap to sail!') : 'Beat the previous boss'}</div>
             ${here ? '<div class="tag">HERE</div>' : ''}</div>`;
         }).join('') + '</div>';
@@ -1102,6 +1146,11 @@ class DragonCraftWorld {
     // Belly plate
     ctx.fillStyle = dragon.belly;
     ctx.fillRect(-6, -36 + hover, 20, 22);
+    if (dragon.icon) {
+      ctx.font = '15px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(dragon.icon, 4, -19 + hover);
+    }
 
     // Front Wing
     ctx.fillStyle = dragon.wing;
@@ -1309,7 +1358,7 @@ class DragonCraftWorld {
         ctx.restore();
       } else {
         // Wild Dragon or Boss Dragon waiting on the island!
-        const bossDragon = DRAGONS.find(d => d.id === biome.bossId) || DRAGONS[1];
+        const bossDragon = DRAGONS.find(d => d.id === (this.state.stageOnIsland === 2 ? biome.bossId : biome.guardId)) || DRAGONS[1];
         this.drawDragonSprite(tp.x, tp.y - 10, bossDragon, time, (this.state.stageOnIsland === 2 ? 1.15 : 0.9) * this.scale, true);
       }
 
@@ -1353,12 +1402,10 @@ class DragonCraftWorld {
   startDragonBattle(isBoss) {
     this.mode = 'BATTLE';
     const biome = BIOMES[this.state.islandIndex % BIOMES.length];
-    const enemyDragon = isBoss
-      ? DRAGONS.find(d => d.id === biome.bossId) || DRAGONS[2]
-      : DRAGONS[(this.state.islandIndex + 1) % DRAGONS.length];
+    const enemyDragon = DRAGONS.find(d => d.id === (isBoss ? biome.bossId : biome.guardId)) || DRAGONS[2];
 
     const loop = Math.floor(this.state.islandIndex / BIOMES.length);
-    const hpMult = Math.pow(1.2, loop);
+    const hpMult = Math.pow(1.2, loop) * (1 + 0.06 * (this.state.islandIndex % BIOMES.length));
 
     this.battle = {
       enemy: enemyDragon,
@@ -1623,9 +1670,9 @@ class DragonCraftWorld {
       this.setupIslandEncounters();
       this.openInteractiveChest('🎁 GUARDIAN VICTORY CHEST!', 'You defeated the Bridge Guardian!');
     } else {
-      if (this.state.islandIndex === 3) {
-        this.openInteractiveChest('🎉 FINAL REALM CELEBRATION CHEST!', 'You conquered all 4 realms! Now looping into Master Islands with +20% stronger dragons!');
-      } else if (this.state.islandIndex > 3) {
+      if (this.state.islandIndex % BIOMES.length === BIOMES.length - 1) {
+        this.openInteractiveChest('🎉 FINAL REALM CELEBRATION CHEST!', 'You conquered all 12 realms! Now looping into Master Islands with +20% stronger dragons!');
+      } else if (this.state.islandIndex >= BIOMES.length) {
         this.openInteractiveChest('👑 MASTER REALM MYSTERY CHEST!', `You conquered the looping island realm! (+20% Enemy HP loop active)`);
       } else {
         this.openInteractiveChest('👑 ISLAND BOSS MYSTERY CHEST!', `You conquered the Island and reached a new realm!`);
@@ -1665,7 +1712,7 @@ class DragonCraftWorld {
       this.state.gear.push(g.id);
       reward = { icon: g.icon, name: g.name, desc: g.desc, fact: g.fact };
     } else if (unownedDragons.length > 0) {
-      const d = unownedDragons[0];
+      const d = unownedDragons[Math.floor(Math.random() * unownedDragons.length)];
       this.state.dragons.push(d.id);
       this.equipNew(d.id);
       reward = {
