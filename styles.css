@@ -22,6 +22,14 @@
   padding: 0;
   user-select: none;
   -webkit-user-select: none;
+  touch-action: manipulation; /* no double-tap zoom anywhere */
+}
+
+/* iOS Safari will not let you type into inputs with user-select:none */
+input {
+  user-select: text;
+  -webkit-user-select: text;
+  -webkit-appearance: none;
 }
 
 html, body {

@@ -876,7 +876,19 @@ class DragonCraftWorld {
 
     // Block Safari pinch / double-tap zoom
     ['gesturestart', 'gesturechange'].forEach(t => document.addEventListener(t, e => e.preventDefault()));
-    document.addEventListener('touchmove', e => e.preventDefault(), { passive: false });
+    // Block page scroll/rubber-band, but let the menu lists scroll
+    document.addEventListener('touchmove', e => {
+      if (!e.target.closest || !e.target.closest('.menu-body')) e.preventDefault();
+    }, { passive: false });
+    // iOS ignores user-scalable=no: kill double-tap-to-zoom (thumbstick, canvas, anywhere)
+    let lastTouchEnd = 0;
+    document.addEventListener('touchend', e => {
+      const now = Date.now();
+      const interactive = e.target.closest && e.target.closest('button, input, .menu-item');
+      if (now - lastTouchEnd < 350 && !interactive) e.preventDefault();
+      lastTouchEnd = now;
+    }, { passive: false });
+    document.addEventListener('dblclick', e => e.preventDefault());
 
     // Cycle active lead dragon
     document.getElementById('btnSwapDragon').addEventListener('click', () => {
@@ -1630,9 +1642,10 @@ class DragonCraftWorld {
     const H = this.vh;
 
     // Award coins & XP
-    const earnedCoins = 25 * this.state.streak;
+    const earnedCoins = 25 * Math.min(this.state.streak, 10);
     this.state.coins += earnedCoins;
     this.gainXP(40);
+    this.gainDragonXP(35);
 
     if (this.pendingAction === 'CRYSTAL') {
       const goal = BIOMES[this.state.islandIndex % BIOMES.length].goal;
