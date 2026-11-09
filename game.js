@@ -296,14 +296,35 @@ function createVisualSTEMChallenge(level = 1) {
       choices: shuffle(['The loop is CLOSED ⚡', 'The wire is cut in half ✂️', 'The battery is removed 🔋']),
       drawDiagram: ctx => {
         ctx.clearRect(0, 0, 540, 150);
-        ctx.strokeStyle = '#06d6a0';
-        ctx.lineWidth = 4;
-        ctx.strokeRect(150, 35, 240, 80);
+        // Battery on left
         ctx.fillStyle = '#ffd166';
-        ctx.font = 'bold 20px sans-serif';
+        ctx.font = 'bold 18px sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText('🔋 Battery', 150, 80);
-        ctx.fillText('💡 Glowing Lamp', 390, 80);
+        ctx.fillText('🔋 Battery', 90, 80);
+
+        // Wire loop with visible gap at top
+        ctx.strokeStyle = '#06d6a0';
+        ctx.lineWidth = 5;
+        // Bottom wire
+        ctx.beginPath(); ctx.moveTo(130, 95); ctx.lineTo(410, 95); ctx.stroke();
+        // Left vertical wire
+        ctx.beginPath(); ctx.moveTo(130, 45); ctx.lineTo(130, 95); ctx.stroke();
+        // Right vertical wire
+        ctx.beginPath(); ctx.moveTo(410, 45); ctx.lineTo(410, 95); ctx.stroke();
+        // Top wire with visible gap
+        ctx.beginPath(); ctx.moveTo(130, 45); ctx.lineTo(235, 45); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(305, 45); ctx.lineTo(410, 45); ctx.stroke();
+
+        ctx.fillStyle = '#ef476f';
+        ctx.font = 'bold 13px sans-serif';
+        ctx.fillText('✂️ OPEN GAP', 270, 40);
+
+        // Dark Lamp (Off) on right
+        ctx.fillStyle = '#334155';
+        ctx.beginPath(); ctx.arc(410, 70, 22, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = '#64748b'; ctx.lineWidth = 3; ctx.stroke();
+        ctx.fillStyle = '#cbd5e0'; ctx.font = 'bold 14px sans-serif';
+        ctx.fillText('💡 Dark Lamp (Off)', 410, 122);
       }
     }
   ];
@@ -1076,10 +1097,13 @@ class DragonCraftWorld {
       ? DRAGONS.find(d => d.id === biome.bossId) || DRAGONS[2]
       : DRAGONS[(this.state.islandIndex + 1) % DRAGONS.length];
 
+    const loop = Math.floor(this.state.islandIndex / BIOMES.length);
+    const hpMult = Math.pow(1.2, loop);
+
     this.battle = {
       enemy: enemyDragon,
-      enemyHp: isBoss ? 120 : 80,
-      enemyMaxHp: isBoss ? 120 : 80,
+      enemyHp: isBoss ? Math.round(120 * hpMult) : Math.round(80 * hpMult),
+      enemyMaxHp: isBoss ? Math.round(120 * hpMult) : Math.round(80 * hpMult),
       heroHp: 100,
       heroMaxHp: 100,
       laserAnim: 0,
@@ -1242,7 +1266,23 @@ class DragonCraftWorld {
       this.state.streak = 1;
       sfx.wrongTry();
       document.getElementById('forgeHelperTip').classList.remove('hidden');
+
+      if (this.mode === 'BATTLE' && this.battle) {
+        this.battle.heroHp = Math.max(0, this.battle.heroHp - 15);
+        this.triggerScreenShake(8, 10);
+        this.spawnFloatText(this.vw * 0.27, this.vh * 0.62 - 80, '💥 -15 HP Wrong Try!', '#ef476f');
+        if (this.battle.heroHp <= 0) {
+          this.handleHeroNaps();
+        }
+      }
     }
+  }
+
+  handleHeroNaps() {
+    sfx.wrongTry();
+    this.spawnFloatText(this.vw / 2, this.vh / 2 - 40, '💤 Dragon naps — try again!', '#ffd166');
+    this.battle.heroHp = this.battle.heroMaxHp;
+    document.getElementById('spellForgeOverlay').classList.add('hidden');
   }
 
   executeSuccessfulSpell() {
@@ -1298,8 +1338,11 @@ class DragonCraftWorld {
     } else {
       // Enemy gentle counter-attack
       setTimeout(() => {
-        this.battle.heroHp = Math.max(25, this.battle.heroHp - 18);
+        this.battle.heroHp = Math.max(0, this.battle.heroHp - 18);
         this.triggerScreenShake(8, 10);
+        if (this.battle.heroHp <= 0) {
+          this.handleHeroNaps();
+        }
       }, 550);
     }
 
@@ -1318,7 +1361,13 @@ class DragonCraftWorld {
       this.setupIslandEncounters();
       this.openInteractiveChest('🎁 GUARDIAN VICTORY CHEST!', 'You defeated the Bridge Guardian!');
     } else {
-      // Completed the whole Island Boss! Advance to next Island & drop Boss Chest!
+      if (this.state.islandIndex === 3) {
+        this.openInteractiveChest('🎉 FINAL REALM CELEBRATION CHEST!', 'You conquered all 4 realms! Now looping into Master Islands with +20% stronger dragons!');
+      } else if (this.state.islandIndex > 3) {
+        this.openInteractiveChest('👑 MASTER REALM MYSTERY CHEST!', `You conquered the looping island realm! (+20% Enemy HP loop active)`);
+      } else {
+        this.openInteractiveChest('👑 ISLAND BOSS MYSTERY CHEST!', `You conquered the Island and reached a new realm!`);
+      }
       this.state.islandIndex++;
       this.state.stageOnIsland = 0;
       this.hero.x = 1;
@@ -1326,7 +1375,6 @@ class DragonCraftWorld {
       this.hero.targetX = 1;
       this.hero.targetY = 4;
       this.setupIslandEncounters();
-      this.openInteractiveChest('👑 ISLAND BOSS MYSTERY CHEST!', `You conquered the Island and reached a new realm!`);
     }
     this.save();
   }
