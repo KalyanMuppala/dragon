@@ -42,6 +42,14 @@ window.addEventListener('load', async () => {
     assert(g.state.stats.sessions === 0, 'sessions not 0');
   });
 
+  await t('A2 dashboard renders for a brand-new profile with no data (no NaN / undefined / errors)', () => {
+    const R = g.report(g.state);
+    const views = ['pvOverview', 'pvSkills', 'pvActivity', 'pvSettings', 'pvReports'].map(f => g[f](g.state, R, false));
+    views.forEach((h, i) => assert(typeof h === 'string' && h.length > 100 && !/NaN|undefined|\[object|Infinity/.test(h), `empty-state view ${i}: ` + (h.match(/.{30}(NaN|undefined|\[object|Infinity).{30}/) || [''])[0]));
+    assert(!/NaN|undefined/.test(g.buildSummaryText(g.state)) && g.buildCsv(g.state).split('\n').length === 1, 'summary/csv for empty state');
+    assert(g.insights(g.state, R).length >= 1, 'insights');
+  });
+
   // ------------------------------------------------------------- onboarding + daily chest
   await t('B1 Play shows the tutorial on first run', async () => {
     $('btnPlayNow').click();
@@ -87,6 +95,18 @@ window.addEventListener('load', async () => {
     assert($('forgeQuestionPrompt').textContent === ch.prompt, 'prompt text');
     assert($('forgePassage').classList.contains('hidden') === !ch.passage, 'passage visibility');
     assert($('forgeHelperTip').classList.contains('hidden'), 'hint should be hidden at first');
+  });
+  await t('C1b the answer timer pauses while the app is hidden / a lock or the dashboard is open', async () => {
+    const q0 = g.qStart;
+    g.pauseQuestionClock('lock'); g.pauseQuestionClock('parent');
+    await sleep(3000);
+    g.resumeQuestionClock('lock');
+    await sleep(2000);
+    assert(g.qStart === q0, 'timer must stay paused while ANY reason is still active');
+    g.resumeQuestionClock('parent');
+    assert(g.qStart - q0 >= 4500, 'start time should shift by the paused time, shifted ' + Math.round(g.qStart - q0) + 'ms');
+    g.resumeQuestionClock('parent'); // extra resume is harmless
+    assert(g._pauseReasons.size === 0, 'no reasons should remain');
   });
   await t('C2 wrong answer: button disabled, hint shown, mistake logged, tries counted', () => {
     const w = wrongBtn(g);
@@ -404,8 +424,8 @@ window.addEventListener('load', async () => {
     const payload = JSON.parse(JSON.stringify(g.exportPayload(g.state)));
     assert(payload.app === 'DragonCraft' && payload.state.stats, 'payload shape');
     const ns = normalizeSave(payload.state);
-    g.viewState = ns; g.parentTab = 'overview'; g.renderParent();
-    assert($('parentBody').textContent.includes('read-only'), 'banner');
+    g.viewState = ns; g.viewMeta = payload.exportedAt; g.parentTab = 'overview'; g.renderParent();
+    assert($('parentBody').textContent.includes('read-only') && $('parentBody').textContent.includes('exported'), 'banner should say read-only and when it was exported');
     assert(![...document.querySelectorAll('.ptab')].some(b => b.dataset.tab === 'settings'), 'settings must be hidden in read-only');
     g.viewState = null; g.renderParent();
     const realPrint = window.print; let printed = 0; window.print = () => { printed++; };
@@ -413,6 +433,23 @@ window.addEventListener('load', async () => {
     assert($('printReport').innerHTML.includes('DragonCraft progress report') && $('printReport').innerHTML.includes('Skills'), 'print html');
     window.print = realPrint;
     $('printReport').innerHTML = '';
+  });
+  await t('P5b damaged / hand-edited report files never crash the viewer', () => {
+    const hostile = [
+      { stats: { log: [null, 5, {}, { t: 'x', cat: 7 }], byCat: { x: 5, y: { asked: 'a' } }, daily: { '2020-01-01': 'bad' }, mistakes: [null] }, settings: 'oops' },
+      { stats: {}, dragons: ['nope'], skills: { a: null, b: { tier: 'x' } }, review: [{ kind: 'zzz' }, null] },
+      { name: '<img src=x onerror=alert(1)>', stats: { byCat: { 'Fractions': { subj: 'Math', asked: 3, first: 9, tries: 1, ms: -5 } } } }
+    ];
+    hostile.forEach((h, i) => {
+      g.viewState = normalizeSave(h); g.viewMeta = 'not a date';
+      ['overview', 'skills', 'activity', 'reports'].forEach(tab => {
+        g.parentTab = tab; g.parentView = 'dash'; g.renderParent();
+        const body = $('parentBody').innerHTML;
+        assert(!/<img src=x/i.test(body), 'name must be HTML-escaped');
+        assert(!/NaN|undefined|\[object/.test($('parentBody').textContent), `hostile ${i} ${tab}: bad text`);
+      });
+    });
+    g.viewState = null; g.viewMeta = null; g.parentTab = 'overview'; g.renderParent();
   });
   await t('P6 wrong PINs lock out after 5 tries (and stay locked across reloads)', () => {
     g.closeParent();

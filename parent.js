@@ -78,6 +78,7 @@ Object.assign(DragonCraftWorld.prototype, {
   openParent(authed = false) {
     this.joy = { x: 0, y: 0, id: null };
     document.getElementById('parentOverlay').classList.remove('hidden');
+    this.pauseQuestionClock('parent');
     this.viewState = null;
     if (authed) this.parentAuthed = true;
     this.parentView = this.parentAuthed ? 'dash' : (this.getPin() ? 'login' : 'setup');
@@ -87,8 +88,10 @@ Object.assign(DragonCraftWorld.prototype, {
 
   closeParent() {
     document.getElementById('parentOverlay').classList.add('hidden');
+    this.resumeQuestionClock('parent');
     this.parentAuthed = false;
     this.viewState = null;
+    this.viewMeta = null;
     this.pinDraft = null;
     this.updateHUD();
     this.checkLocks(false);
@@ -143,7 +146,11 @@ Object.assign(DragonCraftWorld.prototype, {
     tabsEl.querySelectorAll('.ptab').forEach(b => b.addEventListener('click', () => { this.parentTab = b.dataset.tab; this.renderParent(); body.scrollTop = 0; }));
 
     let html = '';
-    if (ro) html += `<div class="pd-banner">👀 Viewing a saved report for <b>${esc(st.name)}</b> (read-only). <button class="pd-btn" id="pdBackLocal">Back to this device</button></div>`;
+    if (ro) {
+      const when = this.viewMeta ? new Date(this.viewMeta) : null;
+      const stamp = when && !isNaN(when) ? ` exported ${when.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })} (${this.fmtAgo(when.getTime())})` : '';
+      html += `<div class="pd-banner">👀 Viewing a saved report for <b>${esc(st.name)}</b>${stamp} — read-only. <button class="pd-btn" id="pdBackLocal">Back to this device</button></div>`;
+    }
     html += { overview: this.pvOverview, skills: this.pvSkills, activity: this.pvActivity, settings: this.pvSettings, reports: this.pvReports }[this.parentTab].call(this, st, R, ro);
     body.innerHTML = html;
     const back = document.getElementById('pdBackLocal');
@@ -500,7 +507,7 @@ Object.assign(DragonCraftWorld.prototype, {
           const obj = JSON.parse(String(r.result));
           const raw = obj && obj.state && typeof obj.state === 'object' ? obj.state : obj;
           if (!raw || typeof raw !== 'object' || !raw.stats) throw new Error('not a DragonCraft file');
-          cb(normalizeSave(raw));
+          cb(normalizeSave(raw), obj && obj.exportedAt);
         } catch (e) { msg('❌ That file is not a DragonCraft report or backup.'); }
       };
       r.onerror = () => msg('❌ Could not read that file.');
@@ -508,7 +515,7 @@ Object.assign(DragonCraftWorld.prototype, {
     };
     const fv = document.getElementById('pdFileView');
     document.getElementById('pdOpenView').addEventListener('click', () => fv.click());
-    fv.addEventListener('change', () => { if (fv.files[0]) readFile(fv.files[0], ns => { this.viewState = ns; this.parentTab = 'overview'; this.renderParent(); }); });
+    fv.addEventListener('change', () => { if (fv.files[0]) readFile(fv.files[0], (ns, at) => { this.viewState = ns; this.viewMeta = at || null; this.parentTab = 'overview'; this.renderParent(); }); });
     const rb = document.getElementById('pdRestore');
     if (rb) {
       const fr = document.getElementById('pdFileRestore');
@@ -661,6 +668,7 @@ Object.assign(DragonCraftWorld.prototype, {
   showLock(kind) {
     const set = this.state.settings;
     this.lockKind = kind;
+    this.pauseQuestionClock('lock');
     this.joy = { x: 0, y: 0, id: null };
     this.stopSpeaking();
     const ov = document.getElementById('lockOverlay');
@@ -703,6 +711,7 @@ Object.assign(DragonCraftWorld.prototype, {
   hideLock() {
     document.getElementById('lockOverlay').classList.add('hidden');
     clearInterval(this._breakT);
+    this.resumeQuestionClock('lock');
     this.lockKind = null;
   },
 

@@ -328,26 +328,70 @@ function normalizeSave(raw) {
   if (!/^\d{2}:\d{2}$/.test(st.bedStart || '')) st.bedStart = '20:30';
   if (!/^\d{2}:\d{2}$/.test(st.bedEnd || '')) st.bedEnd = '07:00';
 
-  // upgrade old category names
-  const mapCat = c => (typeof LEGACY_CATS !== 'undefined' && LEGACY_CATS[c]) || c;
+  // ---- sanitise statistics (a damaged/hand-edited save or report must never show NaN or crash) ----
+  const fin = (v, def = 0) => { const n = Number(v); return Number.isFinite(n) ? n : def; };
+  const nn = v => Math.max(0, fin(v));
+  const mapCat = c => (typeof LEGACY_CATS !== 'undefined' && LEGACY_CATS[c]) || String(c);
+  const SUBJECTS = ['Math', 'English', 'Science'];
+  const subjOfCat = {};
+  Object.values(KIND_META).forEach(m => { subjOfCat[m.cat] = m.subj; });
+  const subjFor = (cat, hint) => subjOfCat[cat] || (SUBJECTS.includes(hint) ? hint : 'Math');
+
   const bc = {};
   Object.entries(s.stats.byCat).forEach(([k, v]) => {
     if (!v || typeof v !== 'object') return;
     const nk = mapCat(k);
-    const e = bc[nk] || (bc[nk] = { subj: v.subj, asked: 0, first: 0, tries: 0, ms: 0 });
-    e.subj = v.subj || e.subj;
-    e.asked += v.asked || 0; e.first += v.first || 0; e.tries += v.tries || 0; e.ms += v.ms || 0;
+    const e = bc[nk] || (bc[nk] = { subj: subjFor(nk, v.subj), asked: 0, first: 0, tries: 0, ms: 0 });
+    e.asked += Math.floor(nn(v.asked)); e.first += Math.floor(nn(v.first)); e.tries += Math.floor(nn(v.tries)); e.ms += nn(v.ms);
+  });
+  Object.keys(bc).forEach(k => {
+    const e = bc[k];
+    e.first = Math.min(e.first, e.asked);
+    if (e.asked <= 0) delete bc[k];
   });
   s.stats.byCat = bc;
-  s.stats.log = s.stats.log.filter(l => l && typeof l === 'object');
-  s.stats.mistakes = s.stats.mistakes.filter(l => l && typeof l === 'object');
-  s.stats.log.forEach(l => { if (l.cat) l.cat = mapCat(l.cat); });
-  s.stats.mistakes.forEach(l => { if (l.cat) l.cat = mapCat(l.cat); });
+
+  s.stats.log = s.stats.log
+    .filter(l => l && typeof l === 'object' && typeof l.cat === 'string' && Number.isFinite(Number(l.t)))
+    .map(l => {
+      const cat = mapCat(l.cat);
+      const tries = Math.max(0, Math.floor(fin(l.tries, 1)));
+      return { t: Number(l.t), cat, subj: subjFor(cat, l.subj), tries, ms: clamp(fin(l.ms), 0, 120000), first: l.first !== undefined ? (l.first ? 1 : 0) : (tries === 1 ? 1 : 0), tier: clamp(Math.round(fin(l.tier, 0)), 0, 5), review: l.review ? 1 : 0, skip: l.skip ? 1 : 0, island: Math.max(0, Math.floor(fin(l.island))) };
+    });
+  s.stats.mistakes = s.stats.mistakes
+    .filter(l => l && typeof l === 'object' && typeof l.cat === 'string' && Number.isFinite(Number(l.t)))
+    .map(l => ({ t: Number(l.t), cat: mapCat(l.cat), subj: subjFor(mapCat(l.cat), l.subj), q: String(l.q == null ? '' : l.q).slice(0, 200), picked: String(l.picked == null ? '' : l.picked).slice(0, 80), correct: String(l.correct == null ? '' : l.correct).slice(0, 80), island: Math.max(0, Math.floor(fin(l.island))) }));
+  const dly = {};
+  Object.entries(s.stats.daily).forEach(([k, v]) => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(k) || !v || typeof v !== 'object') return;
+    const q = Math.floor(nn(v.q));
+    dly[k] = { ms: nn(v.ms), q, first: Math.min(Math.floor(nn(v.first)), q) };
+    if (v.goal) dly[k].goal = 1;
+  });
+  s.stats.daily = dly;
+  const ext = {};
+  Object.entries(s.stats.extra).forEach(([k, v]) => { if (/^\d{4}-\d{2}-\d{2}$/.test(k) && Number.isFinite(Number(v)) && Number(v) > 0) ext[k] = Number(v); });
+  s.stats.extra = ext;
+  ['sessions', 'totalMs', 'reviewFixed', 'feeds'].forEach(k => { s.stats[k] = nn(s.stats[k]); });
+  s.stats.firstPlayed = fin(s.stats.firstPlayed, Date.now());
+  s.daily.last = typeof s.daily.last === 'string' ? s.daily.last : '';
+  s.daily.streak = Math.floor(nn(s.daily.streak)); s.daily.best = Math.floor(nn(s.daily.best)); s.daily.pendingChest = !!s.daily.pendingChest;
+  s.lastBackup = nn(s.lastBackup);
+  s.seenTutorial = !!s.seenTutorial; s.charChanged = !!s.charChanged;
+  // badges: known ids only, valid timestamps
+  const ach = {};
+  ACHIEVEMENTS.forEach(a => { const t = Number(s.achievements[a.id]); if (s.achievements[a.id] && Number.isFinite(t) && t > 0) ach[a.id] = t; });
+  s.achievements = ach;
+  // dragon levels: known dragons only
+  const dl = {};
+  Object.entries(s.dragonLevels).forEach(([id, v]) => { if (DRAGONS.some(d => d.id === id) && v && typeof v === 'object') dl[id] = { lvl: clamp(Math.round(fin(v.lvl, 1)), 1, 10), xp: nn(v.xp) }; });
+  s.dragonLevels = dl;
+  s.recentSigs = s.recentSigs.filter(x => typeof x === 'string').slice(-14);
   const sk = {};
   Object.entries(s.skills).forEach(([k, v]) => {
     if (!v || typeof v !== 'object') return;
     const nk = mapCat(k);
-    sk[nk] = { tier: clamp(Math.round(Number(v.tier) || 3), 1, 5), recent: Array.isArray(v.recent) ? v.recent.slice(-8).map(x => (x ? 1 : 0)) : [], seen: Number(v.seen) || 0 };
+    sk[nk] = { tier: clamp(Math.round(fin(v.tier, 3)), 1, 5), recent: Array.isArray(v.recent) ? v.recent.slice(-8).map(x => (x ? 1 : 0)) : [], seen: Math.floor(nn(v.seen)) };
   });
   s.skills = sk;
   s.review = s.review.filter(r => r && ALL_KINDS.includes(r.kind) && Number.isFinite(r.seed)).slice(-12);
@@ -442,6 +486,11 @@ class DragonCraftWorld {
     };
 
     sfx.musicEnabled = !!this.state.settings.music;
+    // The "time to answer" clock stops while the app is in the background, a lock screen is up or the parent dashboard is open
+    this._pauseReasons = new Set();
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') this.pauseQuestionClock('hidden'); else this.resumeQuestionClock('hidden');
+    });
     this.bindEvents();
     this.updateHUD();
     this.refreshTitle();
@@ -458,6 +507,19 @@ class DragonCraftWorld {
       localStorage.removeItem(SAVE_KEY + '_probe');
     } catch (e) { this.storageOK = false; }
     return normalizeSave(raw);
+  }
+
+  pauseQuestionClock(reason) {
+    if (!this._pauseReasons.size) this._pausedAt = performance.now();
+    this._pauseReasons.add(reason);
+  }
+
+  resumeQuestionClock(reason) {
+    if (!this._pauseReasons.delete(reason)) return;
+    if (!this._pauseReasons.size && this._pausedAt != null) {
+      this.qStart += performance.now() - this._pausedAt; // shift the start so paused time is not counted
+      this._pausedAt = null;
+    }
   }
 
   equipNew(id) {
@@ -1106,9 +1168,9 @@ class DragonCraftWorld {
 
     // Block Safari pinch / double-tap zoom
     ['gesturestart', 'gesturechange'].forEach(t => document.addEventListener(t, e => e.preventDefault()));
-    // Block page scroll/rubber-band, but let the menu lists scroll
+    // Block page scroll/rubber-band, but let the menu lists and the question card scroll
     document.addEventListener('touchmove', e => {
-      if (!e.target.closest || !e.target.closest('.menu-body')) e.preventDefault();
+      if (!e.target.closest || !e.target.closest('.menu-body, .spellforge-card, .tutorial-card')) e.preventDefault();
     }, { passive: false });
     // iOS ignores user-scalable=no: kill double-tap-to-zoom (thumbstick, canvas, anywhere)
     let lastTouchEnd = 0;

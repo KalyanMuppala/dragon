@@ -237,8 +237,8 @@ function drawGrid(ctx, w, h) {
       ctx.fillRect(sx + c * s, sy + r * s, s - 2, s - 2);
     }
   }
-  dgText(ctx, `Width: ${w} blocks`, DW / 2, sy - 8, 16, '#06d6a0');
-  dgText(ctx, `Height: ${h}`, sx - 48, sy + (h * s) / 2 + 5, 16, '#06d6a0');
+  dgText(ctx, `Length: ${w} blocks`, DW / 2, sy - 8, 16, '#06d6a0');
+  dgText(ctx, `Width: ${h}`, sx - 46, sy + (h * s) / 2 + 5, 16, '#06d6a0');
 }
 function drawRectLabeled(ctx, w, h, top, left, inside) {
   dgFrame(ctx);
@@ -333,7 +333,9 @@ function drawCircuit(ctx, closed) {
     dgText(ctx, '✂️', 280, T + 6, 20, '#ef476f');
   }
   ctx.lineCap = 'butt';
-  dgText(ctx, '🔋', 100, 82, 30, '#ffd166');
+  // the battery sits ON the left wire so the loop is truly complete
+  ctx.fillStyle = '#0b1022'; ctx.fillRect(L - 21, 56, 42, 46);
+  dgText(ctx, '🔋', L, 92, 32, '#ffd166');
   ctx.fillStyle = closed ? '#ffee32' : '#334155';
   ctx.beginPath(); ctx.arc(R, 70, 22, 0, Math.PI * 2); ctx.fill();
   ctx.strokeStyle = closed ? '#fff3a0' : '#64748b'; ctx.lineWidth = 3; ctx.stroke();
@@ -401,7 +403,7 @@ function genDiv(t) {
   let prompt, hint, ans, choices;
   if (askRem) {
     prompt = `${total} dragon eggs are shared equally among ${n} nests. How many eggs are LEFT OVER?`;
-    hint = `${n} × ${q} = ${n * q}. You have ${total}, so ${total} − ${n * q} = ${r} eggs are left over!`;
+    hint = `${n} × ${q} = ${n * q} is the biggest times-table fact that does not go over ${total}. Then ${total} − ${n * q} = ${r} eggs are left over!`;
     ans = r;
     choices = numChoices(r, [r + 1, r - 1, n - r, q, 0], { min: 0, spread: 3 });
   } else {
@@ -611,7 +613,7 @@ function genFrac(t) {
   return {
     topic: TOPIC,
     prompt: add
-      ? `A flask is ${a}/${d1} full of blue mana. You add ${b}/${D} of purple mana. How full is it now?`
+      ? `A flask is ${a}/${d1} full of blue mana. You add ${b}/${D} of a flask of purple mana. How full is it now?`
       : `A flask is ${a}/${d1} full. Ignis drinks ${b}/${D} of the flask. How much is left?`,
     hint: `Make the bottoms match: ${a}/${d1} = ${a * (D / d1)}/${D}. Then ${add ? 'add' : 'subtract'} the tops: ${a * (D / d1)} ${add ? '+' : '−'} ${b} = ${num}, so ${ans}.`,
     correct: ans,
@@ -633,8 +635,8 @@ function genArea(t) {
     const w = t === 1 ? rand(2, 5) : rand(4, 8), h = t === 1 ? rand(2, 4) : rand(3, 5), ans = w * h;
     return {
       topic: '🏰 MINECRAFT FORTRESS BLUEPRINT',
-      prompt: `This Dragon Landing Pad is ${w} blocks wide and ${h} blocks tall. How many total floor blocks is its Area?`,
-      hint: `Area = Width × Height ➔ ${w} × ${h} = ${ans} blocks!`,
+      prompt: `This Dragon Landing Pad is ${w} blocks long and ${h} blocks wide. How many floor blocks does it cover? (That is its Area.)`,
+      hint: `Area = length × width ➔ ${w} × ${h} = ${ans} blocks!`,
       correct: String(ans),
       choices: numChoices(ans, [w + h, 2 * (w + h), ans + w, ans - w, ans + h], { min: 1 }),
       draw: ctx => drawGrid(ctx, w, h),
@@ -657,8 +659,8 @@ function genArea(t) {
     const w = t === 3 ? rand(3, 9) : rand(6, 15), h = t === 3 ? rand(2, 7) : rand(4, 12), ans = 2 * (w + h);
     return {
       topic: '📐 DRAGON PEN FENCE',
-      prompt: `A fence goes all the way around a dragon pen that is ${w} metres long and ${h} metres wide. How many metres of fence? (Perimeter)`,
-      hint: `Perimeter = add ALL four sides: ${w} + ${h} + ${w} + ${h} = ${ans} metres!`,
+      prompt: `A fence goes all the way around a dragon pen that is ${w} m long and ${h} m wide. How long is the fence in total, in m? (Perimeter)`,
+      hint: `Perimeter = add ALL four sides: ${w} + ${h} + ${w} + ${h} = ${ans} m!`,
       correct: String(ans),
       choices: numChoices(ans, [w * h, w + h, 2 * w + h, ans + 2, ans - 2, ans + 4], { min: 1 }),
       draw: ctx => drawRectLabeled(ctx, w, h, `${w} m`, `${h} m`, 'Fence = ?'),
@@ -669,8 +671,8 @@ function genArea(t) {
     const w = rand(4, 12), h = rand(3, 12), A = w * h;
     return {
       topic: '🏰 MINECRAFT FORTRESS BLUEPRINT',
-      prompt: `A landing pad has an area of ${A} square blocks and is ${w} blocks wide. How many blocks tall is it?`,
-      hint: `Area = width × height, so height = ${A} ÷ ${w} = ${h} blocks!`,
+      prompt: `A landing pad has an area of ${A} square blocks and is ${w} blocks long. How many blocks wide is it?`,
+      hint: `Area = length × width, so width = ${A} ÷ ${w} = ${h} blocks!`,
       correct: String(h),
       choices: numChoices(h, [A - w, w, h + 1, h - 1, h + 2], { min: 1 }),
       draw: ctx => drawRectLabeled(ctx, w, h, `${w}`, '?', `Area = ${A}`),
@@ -680,8 +682,8 @@ function genArea(t) {
   const w = rand(4, 14), h = rand(3, 12), P = 2 * (w + h);
   return {
     topic: '📐 DRAGON PEN FENCE',
-    prompt: `The fence around a dragon pen is ${P} metres long in total. One side is ${w} metres. How long is the pen's other side?`,
-    hint: `Two sides add up to half the fence: ${P} ÷ 2 = ${P / 2}. Then ${P / 2} − ${w} = ${h} metres!`,
+    prompt: `A rectangular dragon pen has ${P} m of fence all the way around. One side is ${w} m long. How long is the side next to it, in m?`,
+    hint: `Two sides add up to half the fence: ${P} ÷ 2 = ${P / 2}. Then ${P / 2} − ${w} = ${h} m!`,
     correct: String(h),
     choices: numChoices(h, [P - w, P / 2, h + 1, h - 1, h + 2 * w], { min: 1 }),
     draw: ctx => drawRectLabeled(ctx, w, h, `${w} m`, '?', `Fence = ${P} m`),
@@ -770,7 +772,7 @@ function genClock(t) {
     return {
       topic: TOPIC,
       prompt: `The clock shows ${fmtTime(h, m)}. What time will it be in ${delta} minutes?`,
-      hint: `Start at ${fmtTime(h, m)}. Add the minutes: ${delta} minutes = ${Math.floor(delta / 60)} hour(s) and ${delta % 60} minutes. That makes ${ans}!`,
+      hint: delta >= 60 ? `${delta} minutes is 1 hour and ${delta - 60} minutes. From ${fmtTime(h, m)}, add 1 hour, then the extra ${delta - 60} minutes: ${ans}!` : `Count on ${delta} minutes from ${fmtTime(h, m)}: that makes ${ans}!`,
       correct: ans,
       choices: timeChoices(ans, [fmtTime(H + 1, M), fmtTime(H - 1, M), fmtTime(H, M + 10), fmtTime(H, M + 50), fmtTime(h, m + delta)]),
       draw: ctx => drawClock(ctx, h, m, ''),
@@ -783,7 +785,7 @@ function genClock(t) {
   return {
     topic: TOPIC,
     prompt: 'What time does the dragon clock show?',
-    hint: `The SHORT purple hand shows the hour (${h}). The LONG red hand shows the minutes — each number is 5 minutes, so it shows ${m} minutes: ${ans}.`,
+    hint: `The SHORT purple hand shows the hour: it is the last number it has passed (${h}). The LONG red hand shows the minutes — each number is 5 minutes, so it shows ${m} minutes: ${ans}.`,
     correct: ans,
     choices: timeChoices(ans, cands),
     draw: ctx => drawClock(ctx, h, m, ''),
@@ -864,10 +866,10 @@ const BANK = {
     [3, `Which word is the OPPOSITE of "generous"?`, `A generous person loves to share. The opposite keeps everything!`, `selfish`, `friendly`, `wealthy`, `generous ↔ ?`],
     [3, `Which word is the OPPOSITE of "expand"?`, `Expand means grow bigger. The opposite makes it smaller!`, `shrink`, `stretch`, `grow`, `expand ↔ ?`],
     [3, `Which word means the SAME as "courageous"?`, `Courageous people do brave things even when they feel scared.`, `brave`, `nervous`, `clever`, `courageous = ?`],
-    [3, `Which word means the SAME as "fragile"?`, `A fragile glass can break very easily.`, `easily broken`, `very strong`, `very heavy`, `fragile = ?`],
+    [3, `What does "fragile" mean?`, `A fragile glass can break very easily.`, `easily broken`, `very strong`, `very heavy`, `fragile = ?`],
     [3, `Which word is the OPPOSITE of "victory"?`, `When you win it is a victory. When you lose, it is a...`, `defeat`, `prize`, `race`, `victory ↔ ?`],
     [3, `Which word means the SAME as "rapid"?`, `Rapid means happening very quickly.`, `quick`, `gentle`, `late`, `rapid = ?`],
-    [3, `Which word means the SAME as "ancient"?`, `Ancient things are from a very long time ago.`, `very old`, `brand new`, `shiny`, `ancient = ?`],
+    [3, `What does "ancient" mean?`, `Ancient things are from a very long time ago.`, `very old`, `brand new`, `shiny`, `ancient = ?`],
     [4, `What does "abundant" mean?`, `If there is an abundant supply of food, there is more than enough!`, `plentiful`, `rare`, `tiny`, `abundant = ?`],
     [4, `What does "scarce" mean?`, `Scarce things are hard to find because there is very little of them.`, `hard to find`, `found everywhere`, `very loud`, `scarce = ?`],
     [4, `Which word is the OPPOSITE of "abundant"?`, `Abundant means plentiful. What is the opposite of plentiful?`, `scarce`, `plentiful`, `generous`, `abundant ↔ ?`],
@@ -879,7 +881,7 @@ const BANK = {
     [5, `Which word is the OPPOSITE of "transparent"?`, `You can see through transparent glass. You cannot see through...`, `opaque`, `clear`, `shiny`, `transparent ↔ ?`],
     [5, `What does "bewildered" mean?`, `If you are bewildered, you feel completely puzzled and confused.`, `confused`, `delighted`, `exhausted`, `bewildered = ?`],
     [5, `What does "persistent" mean?`, `A persistent person keeps trying and does not give up.`, `never giving up`, `easily bored`, `very quiet`, `persistent = ?`],
-    [5, `Which word means the SAME as "ambitious"?`, `An ambitious person has big goals and works hard to reach them.`, `eager to succeed`, `afraid to try`, `easily satisfied`, `ambitious = ?`],
+    [5, `What does "ambitious" mean?`, `An ambitious person has big goals and works hard to reach them.`, `eager to succeed`, `afraid to try`, `easily satisfied`, `ambitious = ?`],
     [5, `Which word is the OPPOSITE of "optimistic"?`, `An optimistic person expects good things. The opposite expects bad things.`, `pessimistic`, `cheerful`, `hopeful`, `optimistic ↔ ?`]
   ]),
 
@@ -944,15 +946,15 @@ const BANK = {
     [3, `In "The knight ran QUICKLY", what kind of word is QUICKLY?`, `An adverb tells HOW something is done (it often ends in -ly)!`, `adverb`, `noun`, `adjective`, `QUICKLY = ?`],
     [3, `What is the short way to write "they are"?`, `The apostrophe takes the place of the missing "a".`, `they're`, `their`, `they'r`, `they are → ?`],
     [3, `What is the short way to write "cannot"?`, `Can't squeezes "cannot" into one short word.`, `can't`, `cant'`, `ca'nt`, `cannot → ?`],
-    [4, `Pick the right word: "The dragon licked ___ wounds."`, `"Its" shows ownership (no apostrophe). "It's" always means "it is".`, `its`, `it's`, `its'`, `___ wounds`],
+    [4, `Pick the right word: "The dragon licked ___ wounds."`, `"Its" shows ownership (no apostrophe). "It's" is short for "it is" or "it has".`, `its`, `it's`, `its'`, `___ wounds`],
     [4, `Pick the right word: "___ a sunny day today."`, `"It's" is short for "it is".`, `It's`, `Its`, `Its'`, `___ a sunny day`],
     [4, `Pick the right word: "She sings very ___ ."`, `We use "well" (an adverb) to tell HOW she sings.`, `well`, `good`, `goodly`, `She sings very ___`],
-    [4, `Pick the right word: "Each of the wizards ___ a staff."`, `"Each" means one at a time, so use "has".`, `has`, `have`, `having`, `Each of the wizards ___`],
+    [4, `Pick the right word: "One of the wizards ___ a staff."`, `"One" is the subject, so use "has".`, `has`, `have`, `having`, `One of the wizards ___`],
     [4, `Pick the right word: "The knight ran ___ ."`, `We need an adverb to tell HOW he ran: quickly (it ends in -ly).`, `quickly`, `quick`, `quickness`, `The knight ran ___`],
     [4, `Pick the right word: "Yesterday, the wizard ___ a spell."`, `Cast is special — the past of "cast" is still "cast"!`, `cast`, `casted`, `casting`, `Yesterday he ___`],
     [5, `Pick the right word: "There are ___ eggs than yesterday."`, `Use "fewer" for things you can count, like eggs.`, `fewer`, `less`, `lesser`, `___ eggs than yesterday`],
     [5, `Pick the right word: "The two ___ tails were long."`, `The tails belong to more than one dragon, so the apostrophe goes after the "s".`, `dragons'`, `dragon's`, `dragons`, `The two ___ tails`],
-    [5, `Pick the right word: "Neither of the dragons ___ hungry."`, `"Neither" means "not one of them", so it is singular: "is".`, `is`, `are`, `be`, `Neither of the dragons ___`],
+    [4, `Pick the right word: "The box of crayons ___ on the table."`, `The subject is "box" (one thing), not "crayons".`, `is`, `are`, `were`, `The box of crayons ___`],
     [5, `Pick the right word: "If I ___ a dragon, I would fly everywhere."`, `When you are wishing or pretending, use "were": If I were...`, `were`, `was`, `am`, `If I ___ a dragon`]
   ]),
 
@@ -967,13 +969,13 @@ const BANK = {
     [4, `Which sentence is punctuated correctly?`, `Use a comma after a starting phrase like "After lunch".`, `After lunch, we went outside.`, `After lunch we, went outside.`, `After, lunch we went outside.`, `✏️  ,`],
     [4, `Which sentence is punctuated correctly?`, `Use a comma before "but" when it joins two complete thoughts.`, `I wanted to play, but it was raining.`, `I wanted to play but, it was raining.`, `I wanted, to play but it was raining.`, `✏️  ,  but`],
     [1, `Which sentence is written correctly?`, `Always write the word "I" as a capital letter.`, `Today I am going to the park.`, `Today i am going to the park.`, `today I am going to the park.`, `✏️  I`],
-    [1, `Which sentence is written correctly?`, `Start with a capital letter and end with a full stop.`, `The cat sat on the mat.`, `the cat sat on the mat`, `The cat sat on the mat`, `✏️  .  ?  !`],
+    [1, `Which sentence is written correctly?`, `Start with a capital letter and end with a full stop (period).`, `The cat sat on the mat.`, `the cat sat on the mat`, `The cat sat on the mat`, `✏️  .  ?  !`],
     [2, `Which sentence is written correctly?`, `Days of the week and months start with a capital letter.`, `We have a test on Monday.`, `We have a test on monday.`, `we have a test on Monday.`, `✏️  Monday`],
     [2, `Which sentence has the correct end mark?`, `A sentence that asks something ends with a question mark.`, `How old are you?`, `How old are you.`, `How old are you!`, `✏️  ?`],
     [2, `Which sentence is written correctly?`, `The first word and every name get a capital letter.`, `Raj and Maya went to London.`, `raj and maya went to london.`, `Raj and maya went to London.`, `✏️  A a`],
     [3, `Which sentence uses an apostrophe correctly?`, `The apostrophe shows the missing letter in a contraction: did not = didn't.`, `She didn't finish her lunch.`, `She did'nt finish her lunch.`, `She didnt' finish her lunch.`, `✏️  '`],
-    [3, `Which sentence uses commas in a list correctly?`, `Put a comma after each item except the last two joined by "and".`, `We saw lions, tigers, and bears.`, `We saw lions tigers, and bears.`, `We saw, lions tigers and bears.`, `✏️  ,  ,  ,`],
-    [4, `Which sentence is punctuated correctly?`, `A comma follows the person you are speaking to: "Mom, can we go?"`, `Dad, can we go to the beach?`, `Dad can, we go to the beach?`, `Dad can we go, to the beach?`, `✏️  ,  ?`],
+    [3, `Which sentence uses commas in a list correctly?`, `Put a comma between the items in a list.`, `We saw lions, tigers, and bears.`, `We saw lions tigers, and bears.`, `We saw, lions tigers and bears.`, `✏️  ,  ,  ,`],
+    [4, `Which sentence is punctuated correctly?`, `A comma follows the person you are speaking to: "Gran, can we go?"`, `Dad, can we go to the beach?`, `Dad can, we go to the beach?`, `Dad can we go, to the beach?`, `✏️  ,  ?`],
     [4, `Which sentence uses quotation marks correctly?`, `The punctuation goes inside the closing quotation mark.`, `"I am hungry," said Ana.`, `"I am hungry", said Ana.`, `"I am hungry, said" Ana.`, `✏️  " "`],
     [5, `Which sentence is punctuated correctly?`, `A colon (:) can introduce a list of things.`, `Pack these items: a torch, a map, and a rope.`, `Pack these items; a torch a map and a rope.`, `Pack these items, a torch: a map and a rope.`, `✏️  :`]
   ]),
@@ -1000,11 +1002,11 @@ const BANK = {
     [2, `Which word RHYMES with "cave"?`, `Cave, wave, and brave all end in "-ave".`, `wave`, `cove`, `cure`, `cave ≈ ?`],
     [2, `How many syllables (beats) are in "elephant"?`, `Clap it out: el - e - phant. That is 3 claps!`, `3`, `2`, `4`, `el · e · phant`],
     [3, `How many syllables (beats) are in "fantastic"?`, `Clap it out: fan - tas - tic. That is 3 claps!`, `3`, `2`, `4`, `fan · tas · tic`],
-    [3, `Which word has a SILENT "g"?`, `The "g" stays quiet in the word gnat and sign.`, `sign`, `giant`, `grape`, `g...`],
+    [3, `Which word has a SILENT "g"?`, `The "g" stays quiet in the words gnat and sign.`, `sign`, `giant`, `grape`, `g...`],
     [3, `Which word has a SILENT "h" at the start?`, `The "h" is quiet in hour.`, `hour`, `horse`, `happy`, `h...`],
     [4, `How many syllables (beats) are in "magnificent"?`, `Clap it out: mag - nif - i - cent. That is 4 claps!`, `4`, `3`, `5`, `mag · nif · i · cent`],
     [4, `Which word has a SILENT "t"?`, `The "t" is quiet in castle.`, `castle`, `table`, `tiger`, `t...`],
-    [5, `Which word has the same vowel sound as "boat"?`, `Boat has the long "o" sound, like in "road".`, `road`, `hot`, `book`, `boat ≈ ?`]
+    [2, `Which word has the same vowel sound as "boat"?`, `Boat has the long "o" sound, like in "road".`, `road`, `hot`, `book`, `boat ≈ ?`]
   ]),
 
   wordparts: B([
@@ -1014,7 +1016,7 @@ const BANK = {
     [2, `What word do you get when you join "sun" + "flower"?`, `Two small words joined together make a compound word.`, `sunflower`, `flowersun`, `sunsflower`, `sun + flower`],
     [3, `What does the suffix "-ful" mean in "careful"?`, `The suffix -ful means "full of": careful = full of care.`, `full of`, `without`, `not`, `-ful = ?`],
     [3, `What does the prefix "pre-" mean in "preview"?`, `The prefix pre- means "before": a preview is a look before.`, `before`, `after`, `again`, `pre- = ?`],
-    [4, `Which prefix makes the OPPOSITE of "possible"?`, `Before the letter "p" we use "im-": impossible.`, `im-`, `un-`, `re-`, `___ + possible`],
+    [4, `Which prefix makes the OPPOSITE of "possible"?`, `im- means "not". It replaces in- before p, b and m: impossible.`, `im-`, `un-`, `re-`, `___ + possible`],
     [4, `What is the ROOT (base) word in "unbelievable"?`, `Take off the prefix un- and the suffix -able.`, `believe`, `unbeliev`, `able`, `un · believe · able`],
     [4, `What does the prefix "dis-" mean in "disappear"?`, `The prefix dis- means "not" or "the opposite of".`, `the opposite of`, `again`, `before`, `dis- = ?`],
     [5, `What does the suffix "-able" mean in "washable"?`, `The suffix -able means "can be done": washable = can be washed.`, `can be done`, `full of`, `without`, `-able = ?`],
@@ -1037,22 +1039,22 @@ const BANK = {
     [2, `Why did the dragon light a small fire?`, `The second sentence tells you why.`, `to warm the cave`, `to cook dinner`, `to scare a knight`, `📖`, `A dragon's cave was cold and dark. The dragon lit a small fire to warm the cave. Soon the walls glowed orange.`],
     [2, `What did Ana do right after mixing the flour and eggs?`, `The word "Next" tells you what came second.`, `poured the batter into a pan`, `baked it for twenty minutes`, `ate the cake`, `📖`, `First, Ana mixed the flour and eggs. Next, she poured the batter into a pan. Last, she baked it for twenty minutes.`],
     [2, `How did Sam feel at first?`, `The first sentence tells you.`, `nervous`, `angry`, `sleepy`, `📖`, `Sam was nervous. His hands shook as he walked on stage. Then he took a deep breath and began to sing.`],
-    [3, `What was the weather most likely like?`, `An umbrella and a raincoat keep you dry in rain.`, `rainy`, `sunny`, `snowy`, `📖`, `Ravi grabbed his umbrella and a raincoat before leaving. He zipped up his boots.`],
+    [3, `What was the weather probably like?`, `An umbrella and a raincoat keep you dry in rain.`, `rainy`, `sunny`, `snowy`, `📖`, `Ravi grabbed his umbrella and a raincoat before leaving. He zipped up his boots.`],
     [3, `What is the main idea of this passage?`, `The main idea is what the WHOLE passage is mostly about.`, `Bees help plants make seeds by carrying pollen.`, `Bees are black and yellow.`, `Flowers grow in gardens.`, `📖`, `Bees visit flowers to drink nectar. As they move from flower to flower, pollen sticks to their legs and falls onto other flowers. This helps plants make seeds.`],
     [3, `What happened AFTER the storm?`, `The word "After" tells you the last part of the story.`, `The farmer opened the barn door.`, `The farmer brought the cows inside.`, `The wind shook the roof.`, `📖`, `Before the storm, the farmer brought the cows into the barn. During the storm, the wind shook the roof. After the storm, the sun came out and the farmer opened the barn door.`],
     [4, `What does "fragile" mean in this passage?`, `Clue: the wood began to crack under the heavy truck.`, `easily broken`, `very long`, `brightly painted`, `📖`, `The old bridge was fragile. When the heavy truck rolled onto it, the wood began to crack.`],
     [4, `Why could the children not walk to school?`, `Look for the word "Because".`, `The flooded road was covered with water.`, `The teacher was sick.`, `It was a holiday.`, `📖`, `Because the river flooded, the village road was covered with water. The children could not walk to school, so the teacher brought lessons to the village hall.`],
     [4, `What had Priya probably been doing?`, `Dirty hands and a sprout in a pot are clues.`, `planting a seed`, `baking bread`, `painting a wall`, `📖`, `Priya's hands were full of dirt. A tiny green sprout poked up from the pot, and she smiled proudly.`],
-    [4, `Which word best describes Zara?`, `She did the right thing even when nobody was watching.`, `honest`, `greedy`, `careless`, `📖`, `Zara found a wallet on the sidewalk. Even though no one was watching, she took it to the police station so the owner could get it back.`],
-    [5, `Which sentence best tells the main idea?`, `Look for the idea that covers ALL the sentences.`, `Octopuses are clever problem-solvers.`, `Octopuses live in jars.`, `Scientists build tanks.`, `📖`, `Octopuses are very clever. In labs they have opened jars to get food, and some have escaped from tanks by squeezing through tiny gaps. Scientists believe octopuses can solve simple puzzles.`],
-    [5, `What lesson does this story teach?`, `The last sentence often tells you the lesson.`, `Practice and effort can lead to success.`, `Racing is dangerous.`, `Winning is only luck.`, `📖`, `Tom kept losing the race, but he practiced every day. After many weeks, he finally crossed the finish line first. He learned that hard work pays off.`],
-    [5, `What is the author's main purpose?`, `The author ends by telling us what to do — that is to persuade.`, `to persuade readers to use cloth bags`, `to teach how to sew cloth bags`, `to describe how turtles swim`, `📖`, `Plastic bags can take hundreds of years to break down. Many end up in the ocean, where sea turtles mistake them for jellyfish and eat them. Using cloth bags helps protect ocean animals.`],
+    [4, `Which word best describes Zara?`, `She did the right thing even when nobody was watching.`, `honest`, `greedy`, `careless`, `📖`, `Zara found a wallet on the street. Even though no one was watching, she took it to the police station so the owner could get it back.`],
+    [4, `Which sentence best tells the main idea?`, `Look for the idea that covers ALL the sentences.`, `Octopuses are clever problem-solvers.`, `Octopuses live in jars.`, `Scientists build tanks.`, `📖`, `Octopuses are very clever. In labs they have opened jars to get food, and some have escaped from tanks by squeezing through tiny gaps. Scientists believe octopuses can solve simple puzzles.`],
+    [3, `What lesson does this story teach?`, `The last sentence often tells you the lesson.`, `Practice and effort can lead to success.`, `Racing is dangerous.`, `Winning is only luck.`, `📖`, `Tom kept losing the race, but he practiced every day. After many weeks, he finally crossed the finish line first. He learned that hard work pays off.`],
+    [5, `What is the author's main purpose?`, `The last sentence tries to convince readers to change what they do.`, `to persuade readers to use cloth bags`, `to teach how to sew cloth bags`, `to describe how turtles swim`, `📖`, `Plastic bags can take hundreds of years to break down. Many end up in the ocean, where sea turtles mistake them for jellyfish and eat them. Using cloth bags helps protect ocean animals.`],
     [1, `What did the kite do?`, `Read the second sentence.`, `flew high in the sky`, `fell in the lake`, `got stuck in a tree`, `📖`, `Max has a red kite. The wind was strong, so the kite flew high in the sky. Max held the string tight.`],
     [1, `Where did Nina put the pot?`, `Look at the second sentence.`, `near the window`, `under the bed`, `outside in the snow`, `📖`, `Nina plants a seed in a pot. She gives it water and puts it near the window. After a week, a tiny green leaf appears.`],
     [2, `Why did Mia like the monkeys best?`, `Look for the word "because".`, `They were funny.`, `They were sleepy.`, `They were very tall.`, `📖`, `The class went on a trip to the zoo. They saw giraffes, monkeys, and a sleepy lion. Mia liked the monkeys best because they were funny.`],
     [2, `What happened when Dev got to the bus stop?`, `Read the second sentence carefully.`, `The bus had already left.`, `The bus was waiting.`, `It started to rain.`, `📖`, `Dev was late for school. He ran to the bus stop, but the bus had already left. He walked the rest of the way.`],
     [3, `What do tadpoles use to breathe?`, `The passage says tadpoles breathe with something.`, `gills`, `lungs`, `wings`, `📖`, `Frogs lay eggs in water. The eggs hatch into tadpoles, which live in water and breathe with gills. Later the tadpoles grow legs, lose their tails, and become frogs that breathe air.`],
-    [3, `Why did Kai whisper?`, `Think about how people should act in a library.`, `The library was quiet.`, `He was sick.`, `He wanted to sing.`, `📖`, `The library was very quiet. Kai tiptoed to the shelf and whispered to his friend. A teacher put a finger to her lips.`],
+    [2, `Why did Kai whisper?`, `The last sentence tells you why.`, `He did not want to disturb the other readers.`, `He was sick.`, `He wanted to sing.`, `📖`, `The library was very quiet. Kai tiptoed to the shelf and whispered to his friend. He did not want to disturb the other readers.`],
     [4, `How did Sara probably feel about her score?`, `She worked hard and grinned from ear to ear.`, `proud and happy`, `upset and worried`, `bored`, `📖`, `Sara studied every night for two weeks. On the day of the spelling test, she wrote each word carefully. When the teacher handed back the papers, Sara grinned from ear to ear.`],
     [4, `Why did sailors look for the North Star?`, `The passage says it stays in the same place.`, `It helped them find their direction.`, `It was the brightest thing in the day.`, `It told them the time of year.`, `📖`, `A long time ago, people used the stars to find their way at night. Sailors looked for the North Star, which always stays in the same place in the sky.`],
     [4, `Why does the arctic hare's fur turn white in winter?`, `Look at what the white fur helps the hare do.`, `to blend in with the snow`, `to stay cool`, `to look bigger`, `📖`, `Some animals, like the arctic hare, grow white fur in winter. The white fur helps them blend in with the snow, so hungry foxes find them harder to see. In summer, their fur turns brown again.`],
@@ -1082,7 +1084,7 @@ const BANK = {
     [2, `What is the job of a plant's stem?`, `The stem holds the plant up and carries water to the leaves.`, `holds the plant up and carries water`, `makes seeds`, `soaks up sunlight`, `🌱`],
     [2, `Which of these is NOT a living thing?`, `Living things grow, need food, and have babies.`, `a rock`, `a tree`, `a worm`, `🪨  🌳  🪱`],
     [3, `What do bees carry from flower to flower that helps plants make seeds?`, `Pollen sticks to bees and gets carried to other flowers.`, `pollen`, `water`, `soil`, `🐝 🌸`],
-    [3, `Which animals live both in water and on land?`, `Amphibians, like frogs, start life in water and later live on land too.`, `amphibians`, `reptiles`, `mammals`, `🐸`],
+    [3, `Frogs, toads and newts belong to which animal group?`, `Amphibians begin life in water and later live on land.`, `amphibians`, `reptiles`, `mammals`, `🐸`],
     [3, `What is a habitat?`, `A habitat is the place where a plant or animal lives.`, `the place where a plant or animal lives`, `a kind of food`, `a baby animal`, `🏞️`],
     [4, `Which part of the body carries messages to the brain?`, `Nerves carry signals between the body and the brain.`, `nerves`, `bones`, `muscles`, `🧠`],
     [4, `What do we call animals without a backbone, like insects and spiders?`, `Invertebrates have no backbone.`, `invertebrates`, `vertebrates`, `mammals`, `🕷️  🐛`],
@@ -1118,7 +1120,7 @@ const BANK = {
     [3, `What is a shaking of the ground caused by moving plates in Earth's crust?`, `Earthquakes happen when giant pieces of crust (plates) move.`, `an earthquake`, `a tornado`, `a flood`, `🌍 〰`],
     [4, `In which layer of the atmosphere does our weather happen?`, `The troposphere is the lowest layer, where clouds and weather are.`, `the troposphere`, `the stratosphere`, `the mesosphere`, `🌥️`],
     [4, `What force keeps the planets orbiting the Sun?`, `The Sun's gravity pulls on the planets and keeps them in orbit.`, `gravity`, `friction`, `magnetism`, `☀️ 🪐`],
-    [5, `What is a rock from space that lands on Earth called?`, `A rock that survives the fall and lands on Earth is called a meteorite.`, `a meteorite`, `a comet`, `an asteroid`, `☄️`],
+    [5, `A piece of space rock that has landed on Earth's surface is called…`, `A rock that survives the fall through the air and lands on Earth is called a meteorite.`, `a meteorite`, `a comet`, `an asteroid`, `🌠 ➜ 🌍`],
     [5, `What do we call the curved path of a planet around the Sun?`, `An orbit is the curved path of one object around another.`, `an orbit`, `a rotation`, `an axis`, `🪐 ⭕`]
   ]),
 
@@ -1134,10 +1136,10 @@ const BANK = {
     [3, `Which simple machine is a ramp?`, `A ramp is a slanted surface, called an inclined plane.`, `inclined plane`, `lever`, `pulley`, `📐`],
     [4, `Sound is made when objects…`, `Sound comes from vibrations — fast back-and-forth movements.`, `vibrate`, `freeze`, `melt`, `🔔 〰`],
     [4, `A seesaw is an example of which simple machine?`, `A seesaw turns on a pivot — that is a lever.`, `lever`, `wheel and axle`, `screw`, `⚖️`],
-    [4, `Mixing sugar into water until it disappears is called…`, `The sugar dissolves and makes a solution.`, `dissolving`, `burning`, `rusting`, `🍬 ➜ 💧`],
+    [4, `Mixing sugar into water until you can no longer see it is called…`, `The sugar dissolves and makes a solution.`, `dissolving`, `burning`, `rusting`, `🍬 ➜ 💧`],
     [4, `Which energy change happens in a lit light bulb?`, `A bulb turns electrical energy into light (and some heat).`, `electrical energy into light and heat`, `light into sound`, `sound into electricity`, `💡`],
     [5, `Which of these is a CHEMICAL change?`, `In a chemical change a NEW substance forms — iron rusting makes iron oxide.`, `iron rusting`, `ice melting`, `paper being cut`, `🔩 ➜ 🟤`],
-    [5, `At sea level, water boils at about…`, `Water boils at 100 °C (212 °F).`, `100 °C`, `50 °C`, `0 °C`, `🌡️ 💧`],
+    [3, `At sea level, water boils at about…`, `Water boils at 100 °C (212 °F).`, `100 °C`, `50 °C`, `0 °C`, `🌡️ 💧`],
     [1, `Which of these is a LIQUID?`, `A liquid flows and takes the shape of its container.`, `milk`, `a rock`, `a pencil`, `🥛`],
     [1, `What do we call water that is frozen?`, `Frozen water is ice, a solid.`, `ice`, `steam`, `rain`, `🧊`],
     [2, `What happens to water when it boils?`, `Boiling water turns into water vapor (a gas).`, `it turns into steam (gas)`, `it turns into ice`, `it turns into a rock`, `🫖 ♨️`],

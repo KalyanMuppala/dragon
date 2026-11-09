@@ -64,7 +64,7 @@ function verify(ch, tag) {
     case 'area': exp(m.w * m.h, 'area'); break;
     case 'perim': exp(2 * (m.w + m.h), 'perim'); break;
     case 'miss_area': exp(m.h, 'miss_area'); break;
-    case 'miss_perim': exp(m.h, 'miss_perim'); if (!ch.prompt.includes(`${2 * (m.w + m.h)} metres`)) fail(`${tag}: miss_perim prompt`); break;
+    case 'miss_perim': exp(m.h, 'miss_perim'); if (!ch.prompt.includes(`${2 * (m.w + m.h)} m of fence`)) fail(`${tag}: miss_perim prompt`); break;
     case 'digit_value': exp(m.ans, 'digit_value'); if (!ch.prompt.includes(`${m.n}`)) fail(`${tag}: digit prompt`); break;
     case 'round': {
       exp(m.ans, 'round'); if (m.ans % m.unit !== 0) fail(`${tag}: round not multiple`);

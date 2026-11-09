@@ -10,9 +10,12 @@ Static web game, no build step, no dependencies. Plain JS + Canvas + CSS. Hosted
 | `game.js` | **Game engine**: sound/music, data (dragons, islands, heroes, badges, facts), save model (`defaultSaveState`, `normalizeSave`), `DragonCraftWorld` class (world, battles, question card, adaptive learning, badges, menus) |
 | `parent.js` | **Parent tools**, mixed into `DragonCraftWorld.prototype`: PIN, dashboard, settings, time limits/bedtime/breaks, reports/backup |
 | `styles.css` | All styling (iPad safe areas, `100dvh`, touch-action rules, print stylesheet, reduced-motion) |
+| `sw.js` | Service worker: network-first (always revalidates, so deploys show immediately) with an offline fallback to the last saved copy |
 | `manifest.json`, `icon-180.png`, `icon-512.png` | Add-to-Home-Screen metadata/icon |
 | `tests/questions.test.js` | Node test of the question engine |
 | `tests/e2e.js`, `tests/run-e2e.sh` | Headless-Chrome end-to-end test (macOS) |
+| `tests/monkey.js`, `tests/run-monkey.sh` | Seeded random-action test with state invariants |
+| `tests/offline.test.js` | Service-worker offline + update test (needs `puppeteer-core`) |
 | `.github/workflows/deploy.yml` | Deploys to Pages; replaces `__V__` in `index.html` with the commit hash |
 
 Script load order matters: `questions.js` → `game.js` → `parent.js`. `window.game` is created on `DOMContentLoaded`.
@@ -46,9 +49,12 @@ Key fields: `settings` (grade, focus, dailyGoalQ, limitMin, bedtimeOn/bedStart/b
 ## Testing
 ```
 node tests/questions.test.js     # 38,000 generated questions, bank checks, spelling vs /usr/share/dict/words
-bash tests/run-e2e.sh            # 37 browser checks (needs Google Chrome on macOS)
+bash tests/run-e2e.sh            # 38 browser checks (needs Google Chrome on macOS)
+bash tests/run-monkey.sh 7 600   # random actions (seed, steps) + invariants after every step
+npm i --no-save puppeteer-core && node tests/offline.test.js   # offline play + "new deploy shows immediately"
 ```
-The e2e test drives the real UI: onboarding, daily chest, adaptive levels, spaced review, all 19 kinds × 5 tiers through the question card, battle guards, parent PIN/lockout, settings, every lock type, backup round-trip, old-save migration.
+CI (`deploy.yml`) runs `node --check` on every script and `tests/questions.test.js` before publishing; a failure blocks the deploy.
+Headless Chrome's virtual clock does not run animation frames or service workers, so the e2e/monkey tests call `checkObjectiveReached()` directly and the offline test uses a real-time browser. The e2e test drives the real UI: onboarding, daily chest, adaptive levels, spaced review, all 19 kinds × 5 tiers through the question card, battle guards, parent PIN/lockout, settings, every lock type, backup round-trip, old-save migration.
 
 ## Known limitations / ideas
 - Limits and reports live on the device. A child who clears Safari website data bypasses limits and loses progress (parents are nudged to back up and install to the Home Screen). Cross-device live sync would need a backend + accounts (deliberately not built; reports can be shared as files instead).

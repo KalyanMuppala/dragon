@@ -28,7 +28,8 @@ There are no accounts, no servers and no analytics. Progress and parent data liv
 ## Run & test
 - Open `index.html` in a browser (no build step), or `python3 -m http.server`.
 - Question engine tests: `node tests/questions.test.js` (verifies tens of thousands of generated questions, spelling words against the system dictionary, determinism, diagrams).
-- Browser end-to-end tests (macOS + Chrome): `bash tests/run-e2e.sh`.
+- Browser end-to-end tests (macOS + Chrome): `bash tests/run-e2e.sh`; random-action test: `bash tests/run-monkey.sh 7 600`; offline/update test: `node tests/offline.test.js` (needs `npm i --no-save puppeteer-core`).
+- Works **offline** after the first visit (service worker); online it always loads the newest version.
 - Pushing to `main` deploys to GitHub Pages (`.github/workflows/deploy.yml`) and stamps a cache-busting version on the scripts and styles.
 
 See `DEVELOPMENT_HANDOFF.md` for the architecture.
