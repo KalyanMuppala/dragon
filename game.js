@@ -1,1614 +1,1444 @@
 // ============================================================================
-// DRAGONCRAFT: PRODIGY REALM — STEM RPG ENGINE FOR 9-YEAR-OLD INNOVATORS
-// Combines Prodigy-style spell battles + Minecraft voxel exploration & crafting
+// DRAGONCRAFT: PRODIGY REALM — 60FPS 2.5D ISOMETRIC VOXEL & DRAGON ENGINE
+// Designed with zero UI clutter: 1-Click Entry, Guided Golden Path,
+// Visual Diagram STEM Spell-Forge, and 3-Tap Interactive Surprise Chests!
 // ============================================================================
 
-const STORAGE_KEY = 'dragoncraft_stem_profiles_v1';
-const ACTIVE_USER_KEY = 'dragoncraft_stem_active_user_v1';
+const SAVE_KEY = 'dragoncraft_prodigy_save_v2';
 
-// --- WEB AUDIO SYNTHESIZER (Zero external audio file dependencies) ---
-class SoundFX {
+// --- PROCEDURAL WEB AUDIO SYNTHESIZER (Chiptune + Magical SFX) ---
+class SoundEngine {
   constructor() {
     this.ctx = null;
-    this.enabled = true;
+    this.muted = false;
   }
   init() {
     if (!this.ctx && (window.AudioContext || window.webkitAudioContext)) {
       this.ctx = new (window.AudioContext || window.webkitAudioContext)();
     }
+    if (this.ctx && this.ctx.state === 'suspended') {
+      this.ctx.resume();
+    }
   }
-  playTone(freq, type = 'sine', duration = 0.15, delay = 0, vol = 0.12) {
-    if (!this.enabled) return;
+  tone(freq, type = 'triangle', dur = 0.15, delay = 0, vol = 0.14) {
+    if (this.muted) return;
     try {
       this.init();
       if (!this.ctx) return;
+      const t = this.ctx.currentTime + delay;
       const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
+      const g = this.ctx.createGain();
       osc.type = type;
-      osc.frequency.setValueAtTime(freq, this.ctx.currentTime + delay);
-      gain.gain.setValueAtTime(vol, this.ctx.currentTime + delay);
-      gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + delay + duration);
-      osc.connect(gain);
-      gain.connect(this.ctx.destination);
-      osc.start(this.ctx.currentTime + delay);
-      osc.stop(this.ctx.currentTime + delay + duration);
+      osc.frequency.setValueAtTime(freq, t);
+      g.gain.setValueAtTime(vol, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+      osc.connect(g);
+      g.connect(this.ctx.destination);
+      osc.start(t);
+      osc.stop(t + dur);
     } catch (e) {}
   }
-  spellSuccess() {
-    [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => this.playTone(f, 'triangle', 0.18, i * 0.07, 0.15));
+  step() {
+    this.tone(240 + Math.random() * 60, 'sine', 0.05, 0, 0.05);
   }
-  spellMiss() {
-    [300, 220].forEach((f, i) => this.playTone(f, 'sawtooth', 0.22, i * 0.12, 0.1));
+  coin() {
+    this.tone(987.77, 'sine', 0.08, 0, 0.1);
+    this.tone(1318.51, 'triangle', 0.16, 0.06, 0.12);
   }
-  chestOpen() {
-    [440, 554.37, 659.25, 880, 1108.73, 1318.5].forEach((f, i) => this.playTone(f, 'triangle', 0.22, i * 0.08, 0.16));
+  spellCharge() {
+    [440, 554.37, 659.25, 880].forEach((f, i) => this.tone(f, 'triangle', 0.14, i * 0.05, 0.12));
   }
-  levelUp() {
-    [523.25, 523.25, 523.25, 659.25, 783.99, 1046.5].forEach((f, i) => this.playTone(f, 'square', 0.2, i * 0.09, 0.12));
+  laserBlast() {
+    this.tone(180, 'sawtooth', 0.35, 0, 0.18);
+    this.tone(520, 'square', 0.25, 0.05, 0.14);
+    this.tone(110, 'sawtooth', 0.4, 0.12, 0.2);
   }
-  mineBlock() {
-    this.playTone(620, 'square', 0.08, 0, 0.1);
-    this.playTone(880, 'triangle', 0.1, 0.06, 0.12);
+  wrongTry() {
+    this.tone(240, 'sawtooth', 0.15, 0, 0.1);
+    this.tone(190, 'sawtooth', 0.2, 0.1, 0.1);
+  }
+  chestTap(step) {
+    const base = 330 + step * 140;
+    this.tone(base, 'square', 0.12, 0, 0.15);
+    this.tone(base * 1.5, 'triangle', 0.18, 0.05, 0.15);
+  }
+  chestExplode() {
+    [523.25, 659.25, 783.99, 1046.5, 1318.51, 1567.98].forEach((f, i) =>
+      this.tone(f, 'triangle', 0.28, i * 0.07, 0.18)
+    );
   }
 }
 
-const sfx = new SoundFX();
+const sfx = new SoundEngine();
 
-// --- DRAGONS CATALOG ---
+// --- DRAGONS ROSTER ---
 const DRAGONS = [
-  {
-    id: 'ignis',
-    name: 'Ignis the Magma Drake',
-    element: 'Fire / Thermal',
-    rarity: 'Common',
-    primary: '#ef476f',
-    secondary: '#ffd166',
-    hornColor: '#ff9f1c',
-    baseHp: 110,
-    power: 22,
-    lore: 'Forged inside Redstone volcanoes! Uses multiplication heatwaves to melt obsidian.',
-    unlockHint: 'Starter / Emerald Woods'
-  },
-  {
-    id: 'voltscale',
-    name: 'Voltscale the Redstone Wyvern',
-    element: 'Lightning / Circuits',
-    rarity: 'Common',
-    primary: '#00bbf9',
-    secondary: '#fee440',
-    hornColor: '#f15bb5',
-    baseHp: 115,
-    power: 24,
-    lore: 'Powered by parallel Redstone circuits and fast division bolts.',
-    unlockHint: 'Starter / Redstone Caverns'
-  },
-  {
-    id: 'cryowing',
-    name: 'Cryowing the Frostisk',
-    element: 'Ice / States of Matter',
-    rarity: 'Common',
-    primary: '#4cc9f0',
-    secondary: '#e0fbfc',
-    hornColor: '#7209b7',
-    baseHp: 120,
-    power: 21,
-    lore: 'Freezes water molecules into crystalline hexagonal fractions!',
-    unlockHint: 'Starter / Crystal Peaks'
-  },
-  {
-    id: 'terrahorn',
-    name: 'Terrahorn the Emerald Guardian',
-    element: 'Earth / Geometry',
-    rarity: 'Rare',
-    primary: '#06d6a0',
-    secondary: '#b7efc5',
-    hornColor: '#ffd166',
-    baseHp: 145,
-    power: 28,
-    lore: 'Shapes perfect cubic voxel fortresses using perimeter and area formulas.',
-    unlockHint: 'Tame in Emerald Voxel Woods'
-  },
-  {
-    id: 'nebulon',
-    name: 'Nebulon the Cosmic Wyrm',
-    element: 'Gravity / Astronomy',
-    rarity: 'Rare',
-    primary: '#9b5de5',
-    secondary: '#f15bb5',
-    hornColor: '#00f5d4',
-    baseHp: 165,
-    power: 32,
-    lore: 'Orbits distant exoplanets and bends starlight with algebraic equations.',
-    unlockHint: 'Tame in Redstone Caverns'
-  },
-  {
-    id: 'solaria',
-    name: 'Solaria the Sunstone Phoenix-Dragon',
-    element: 'Solar / Photosynthesis',
-    rarity: 'Epic',
-    primary: '#ff9f1c',
-    secondary: '#ffee32',
-    hornColor: '#ef476f',
-    baseHp: 190,
-    power: 36,
-    lore: 'Absorbs solar photons and converts light energy into golden shields.',
-    unlockHint: 'Tame in Crystal Sky Citadel'
-  },
-  {
-    id: 'hydracoil',
-    name: 'Hydracoil the Abyssal Leviathan',
-    element: 'Hydro / Density & Pressure',
-    rarity: 'Epic',
-    primary: '#118ab2',
-    secondary: '#06d6a0',
-    hornColor: '#ffd166',
-    baseHp: 215,
-    power: 40,
-    lore: 'Masters ocean currents, buoyancy, and multi-step fraction whirlpools.',
-    unlockHint: 'Unlock via Gilded or Arcane Chest'
-  },
-  {
-    id: 'enderbyte',
-    name: 'Enderbyte the Quantum Dragon',
-    element: 'Quantum / Coding Logic',
-    rarity: 'Mythic',
-    primary: '#7209b7',
-    secondary: '#00f5d4',
-    hornColor: '#ffd166',
-    baseHp: 260,
-    power: 48,
-    lore: 'Supreme ruler of the Obsidian Citadel. Speaks pure binary, logic gates, and order of operations!',
-    unlockHint: 'Boss of Obsidian Ender Keep / Mythic Chest'
-  }
+  { id: 'ignis', name: 'Ignis the Magma Drake', color: '#ef476f', wing: '#ffd166', belly: '#ff9f1c', element: 'Fire' },
+  { id: 'volt', name: 'Voltscale the Redstone Wyvern', color: '#00bbf9', wing: '#fee440', belly: '#a8ffea', element: 'Storm' },
+  { id: 'frost', name: 'Cryowing the Ice Dragon', color: '#4cc9f0', wing: '#e0fbfc', belly: '#90e0ef', element: 'Frost' },
+  { id: 'terra', name: 'Terrahorn the Emerald Drake', color: '#06d6a0', wing: '#ffd166', belly: '#b7efc5', element: 'Earth' },
+  { id: 'nebula', name: 'Nebulon the Starlight Wyrm', color: '#9b5de5', wing: '#f15bb5', belly: '#00f5d4', element: 'Cosmic' },
+  { id: 'ender', name: 'Enderbyte the Quantum Dragon', color: '#7209b7', wing: '#00f5d4', belly: '#ffd166', element: 'Quantum' }
 ];
 
-// --- CHEST TYPES ---
-const CHEST_TYPES = [
-  {
-    id: 'oak',
-    name: 'Voxel Crafter Chest',
-    rarity: 'common',
-    rarityLabel: 'Common Surprise',
-    costPoints: 120,
-    colorTop: '#c97a3e',
-    colorBase: '#8c4f20',
-    trim: '#ffd166',
-    desc: 'Packed with Voxel Ores, Dragon Berries, +50–120 Game Points, and STEM Collector Cards!'
-  },
-  {
-    id: 'gilded',
-    name: 'Gilded Prodigy Chest',
-    rarity: 'rare',
-    rarityLabel: 'Rare Surprise',
-    costPoints: 260,
-    colorTop: '#ffd166',
-    colorBase: '#d9822b',
-    trim: '#06d6a0',
-    desc: 'Contains Rare Wizard Relics, high-tier Voxel Diamonds, +150–300 Points, and Rare Dragon Eggs!'
-  },
-  {
-    id: 'arcane',
-    name: 'Redstone Arcane Chest',
-    rarity: 'epic',
-    rarityLabel: 'Epic Surprise',
-    costPoints: 450,
-    colorTop: '#ef476f',
-    colorBase: '#7209b7',
-    trim: '#00f5d4',
-    desc: 'Charged with Redstone magic! High chance of Epic Dragons, Netherite Wands, and +350 Points!'
-  },
-  {
-    id: 'mythic',
-    name: 'Mythic Dragon Egg Chest',
-    rarity: 'mythic',
-    rarityLabel: 'Mythic Surprise',
-    costPoints: 750,
-    colorTop: '#5a189a',
-    colorBase: '#240046',
-    trim: '#ffd166',
-    desc: 'Ultimate prize chest! Guarantees Mythic Gear, Elder Dragon Evolution Stones, or Enderbyte Shards!'
-  }
+// --- VISIBLE GEAR & SURPRISES ---
+const SURPRISES = [
+  { id: 'crown_gold', name: 'Golden Crown of Equations', icon: '👑', type: 'crown', desc: 'Your Wizard now wears the Golden Royal Crown on screen!', fact: 'STEM Secret: Gold is so malleable that 1 ounce can be beaten into a sheet covering 100 square feet!' },
+  { id: 'wings_aether', name: 'Aether Dragon Wings', icon: '🦋', type: 'wings', desc: 'Magical cyan wings equipped to your Wizard back!', fact: 'STEM Secret: Dragonflies can flap all 4 wings independently and fly backward at 30 mph!' },
+  { id: 'staff_nether', name: 'Redstone Superconductor Staff', icon: '🪄', type: 'staff', desc: 'Doubles the size of your spell fireballs!', fact: 'STEM Secret: Lightning bolts are 5 times hotter than the surface of the Sun (around 50,000°F)!' },
+  { id: 'pet_star', name: 'Mini Supernova Orbiting Star', icon: '🌟', type: 'orbit', desc: 'A glowing mini-star orbits your Wizard everywhere you walk!', fact: 'STEM Secret: A neutron star is so dense that 1 teaspoon of it weighs as much as a mountain!' }
 ];
 
-// --- SURPRISE COLLECTIBLES & RELICS ---
-const SURPRISE_ITEMS = [
-  { id: 'pickaxe_diamond', name: 'Diamond Equation Pickaxe', icon: '⛏️', bonus: '+15% Voxel Ore Mining', fact: 'STEM Fact: Diamonds are made of pure carbon atoms arranged in a super-strong crystal lattice!' },
-  { id: 'wand_redstone', name: 'Redstone Capacitor Wand', icon: '🪄', bonus: '+10 Spell Crit Power', fact: 'STEM Fact: An electrical circuit needs a closed loop for electrons to flow from negative to positive!' },
-  { id: 'crown_prime', name: 'Crown of Prime Numbers', icon: '👑', bonus: '+20% Game Points per Battle', fact: 'STEM Fact: 2 is the only even prime number in the entire universe!' },
-  { id: 'wings_elytra', name: 'Aether Dragon Elytra Wings', icon: '🦋', bonus: 'Fast Map Gliding', fact: 'STEM Fact: Airplane and dragon wings create "lift" because air moves faster over the curved top surface!' },
-  { id: 'shield_obsidian', name: 'Obsidian Bastion Shield', icon: '🛡️', bonus: '+25 Max Hero HP', fact: 'STEM Fact: Real obsidian is volcanic glass formed when lava cools super rapidly!' },
-  { id: 'compass_magnet', name: 'Lodestone Magnetic Compass', icon: '🧭', bonus: 'Reveals Hidden Chests', fact: 'STEM Fact: Earth itself acts like a giant bar magnet because of liquid iron swirling in its outer core!' },
-  { id: 'visor_quantum', name: 'Ender Logic Goggles', icon: '🥽', bonus: 'Free Hint in Every Battle', fact: 'STEM Fact: Computers think using billions of tiny switches called transistors that flip between 0 and 1!' },
-  { id: 'orb_galaxy', name: 'Nebula Starlight Orb', icon: '🔮', bonus: '+25% Dragon Taming Chance', fact: 'STEM Fact: Light from the Sun takes about 8 minutes and 20 seconds to travel 93 million miles to Earth!' }
+// --- BIOMES / ISLANDS ---
+const BIOMES = [
+  { name: 'ISLAND 1 • EMERALD VOXEL WOODS', top: '#2ec4b6', left: '#1b9aaa', right: '#0f6b78', water: '#0b1d3a', bossId: 'frost' },
+  { name: 'ISLAND 2 • REDSTONE MAGMA CITADEL', top: '#e76f51', left: '#b5381a', right: '#781d09', water: '#2a080c', bossId: 'volt' },
+  { name: 'ISLAND 3 • CRYSTAL SKY SANCTUARY', top: '#4cc9f0', left: '#3a86ff', right: '#1d4ed8', water: '#0f172a', bossId: 'terra' },
+  { name: 'ISLAND 4 • OBSIDIAN ENDER KEEP', top: '#9b5de5', left: '#6930c3', right: '#3c096c', water: '#090414', bossId: 'ender' }
 ];
 
-// --- ACHIEVEMENTS (Every single achievement grants a Free Surprise Chest!) ---
-const ACHIEVEMENTS = [
-  { id: 'first_spell', title: 'Apprentice Spellcaster', icon: '⚡', desc: 'Solve your very first STEM spell equation in battle.', chestReward: 'oak', check: p => p.stats.correctAnswers >= 1 },
-  { id: 'streak_5', title: '5x Prodigy Streak!', icon: '🔥', desc: 'Solve 5 STEM challenges in a row without a miss.', chestReward: 'gilded', check: p => p.stats.bestStreak >= 5 },
-  { id: 'streak_10', title: 'Grandmaster of Equations', icon: '🌟', desc: 'Reach an unstoppable 10x answer streak!', chestReward: 'arcane', check: p => p.stats.bestStreak >= 10 },
-  { id: 'dragon_tamer', title: 'Dragon Whisperer', icon: '🐉', desc: 'Collect or tame 3 different Elemental Dragons.', chestReward: 'gilded', check: p => p.dragons.length >= 3 },
-  { id: 'dragon_master', title: 'Lord of the Dragon Sanctuary', icon: '👑', desc: 'Collect 6 or more Elemental Dragons in your Codex.', chestReward: 'mythic', check: p => p.dragons.length >= 6 },
-  { id: 'voxel_miner', title: 'Master Voxel Miner', icon: '⛏️', desc: 'Mine 10 glowing STEM Ore Blocks across the world map.', chestReward: 'oak', check: p => p.stats.blocksMined >= 10 },
-  { id: 'chest_hunter', title: 'Treasure Chest Explorer', icon: '🎁', desc: 'Unbox 5 Surprise Treasure Chests.', chestReward: 'gilded', check: p => p.stats.chestsOpened >= 5 },
-  { id: 'level_3', title: 'Rising Sky Crafter (Lv. 3)', icon: '🚀', desc: 'Reach Hero Level 3 through STEM mastery.', chestReward: 'gilded', check: p => p.level >= 3 },
-  { id: 'level_5', title: 'Arcane STEM Champion (Lv. 5)', icon: '💎', desc: 'Reach Hero Level 5 and unlock the Crystal Citadel.', chestReward: 'arcane', check: p => p.level >= 5 },
-  { id: 'dragon_evolver', title: 'Dragon Evolutionist', icon: '🧬', desc: 'Evolve any Dragon to Stage 2 (Elder Form) in the Sanctuary.', chestReward: 'arcane', check: p => Object.values(p.dragonLevels || {}).some(v => v >= 2) },
-  { id: 'architect_craft', title: 'Voxel STEM Architect', icon: '🏰', desc: 'Craft 3 Voxel Monuments using mined blocks.', chestReward: 'gilded', check: p => (p.craftedBuilds || []).length >= 3 },
-  { id: 'stem_25', title: '25 Brain-Power Victories', icon: '🧠', desc: 'Solve 25 total STEM equations and science puzzles.', chestReward: 'mythic', check: p => p.stats.correctAnswers >= 25 }
-];
-
-// --- VOXEL CRAFTING PROJECTS ---
-const CRAFT_PROJECTS = [
-  { id: 'beacon_math', name: 'Redstone Math Beacon', icon: '🚨', req: { emerald: 3, redstone: 3 }, rewardPoints: 200, desc: 'Boosts all spell damage by +10% permanently!' },
-  { id: 'incubator_egg', name: 'Thermal Dragon Egg Incubator', icon: '🥚', req: { diamond: 2, gold: 4 }, rewardPoints: 250, desc: 'Hatches a free Gilded Prodigy Chest immediately!' },
-  { id: 'observatory', name: 'Galactic Voxel Observatory', icon: '🔭', req: { emerald: 4, diamond: 3, amethyst: 2 }, rewardPoints: 350, desc: 'Unlocks Cosmic Starlight bonus (+15 XP per problem)!' },
-  { id: 'throne_ender', name: 'Obsidian Dragon Portal', icon: '🌌', req: { diamond: 5, redstone: 5, amethyst: 4 }, rewardPoints: 600, desc: 'Summons a Mythic Dragon Egg Chest + +600 Game Points!' }
-];
-
-// --- REALMS / BIOMES ---
-const REALMS = [
-  { id: 0, name: 'Emerald Voxel Woods', icon: '🌲', minLevel: 1, bg: '#132a1e', gridColor: '#1f4430', dragonPool: ['ignis', 'terrahorn', 'cryowing'] },
-  { id: 1, name: 'Redstone Magma Caverns', icon: '🌋', minLevel: 2, bg: '#2b1216', gridColor: '#4a1e24', dragonPool: ['ignis', 'voltscale', 'nebulon'] },
-  { id: 2, name: 'Crystal Sky Citadel', icon: '💎', minLevel: 4, bg: '#112238', gridColor: '#1e3c62', dragonPool: ['cryowing', 'solaria', 'hydracoil'] },
-  { id: 3, name: 'Obsidian Ender Keep', icon: '🌌', minLevel: 6, bg: '#1a0f2e', gridColor: '#321c57', dragonPool: ['nebulon', 'solaria', 'enderbyte'] }
-];
-
-// --- SVG GENERATORS FOR POLISHED ILLUSTRATIONS ---
-function renderDragonSVG(dragon, size = 180, isFlipped = false) {
-  const flip = isFlipped ? 'transform="scale(-1,1) translate(-200,0)"' : '';
-  return `
-  <svg viewBox="0 0 200 170" width="${size}" height="${Math.round(size * 0.85)}" xmlns="http://www.w3.org/2000/svg">
-    <defs>
-      <radialGradient id="glow_${dragon.id}" cx="50%" cy="50%" r="50%">
-        <stop offset="0%" stop-color="${dragon.secondary}" stop-opacity="0.65"/>
-        <stop offset="100%" stop-color="${dragon.primary}" stop-opacity="0"/>
-      </radialGradient>
-      <linearGradient id="body_${dragon.id}" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stop-color="${dragon.primary}"/>
-        <stop offset="100%" stop-color="#191f3a"/>
-      </linearGradient>
-    </defs>
-    <g ${flip}>
-      <!-- Magical Aura -->
-      <circle cx="100" cy="95" r="72" fill="url(#glow_${dragon.id})"/>
-      <!-- Back Wing -->
-      <path d="M85 80 L30 22 L52 68 L22 58 L55 92 Z" fill="${dragon.secondary}" opacity="0.75" stroke="#fff" stroke-width="1.5"/>
-      <!-- Tail with Voxel Spikes -->
-      <path d="M70 125 Q30 140 18 110 Q32 122 58 112 Z" fill="url(#body_${dragon.id})" stroke="${dragon.secondary}" stroke-width="2"/>
-      <polygon points="20,112 10,102 26,105" fill="${dragon.hornColor}"/>
-      <!-- Voxel-styled Dragon Body & Chest Plates -->
-      <rect x="65" y="72" width="58" height="58" rx="16" fill="url(#body_${dragon.id})" stroke="${dragon.secondary}" stroke-width="2.5"/>
-      <rect x="85" y="82" width="32" height="40" rx="8" fill="${dragon.secondary}" opacity="0.85"/>
-      <line x1="85" y1="95" x2="117" y2="95" stroke="#111" stroke-width="2"/>
-      <line x1="85" y1="108" x2="117" y2="108" stroke="#111" stroke-width="2"/>
-      <!-- Front Wing -->
-      <path d="M96 86 L45 15 L72 65 L35 45 L72 95 Z" fill="${dragon.primary}" stroke="${dragon.secondary}" stroke-width="2.5"/>
-      <!-- Dragon Neck & Head -->
-      <rect x="102" y="38" width="46" height="40" rx="11" fill="url(#body_${dragon.id})" stroke="${dragon.secondary}" stroke-width="2.5"/>
-      <!--Snout & Jaw -->
-      <rect x="135" y="48" width="28" height="24" rx="7" fill="${dragon.primary}" stroke="${dragon.secondary}" stroke-width="2"/>
-      <!-- Voxel Horns -->
-      <polygon points="108,38 92,14 120,34" fill="${dragon.hornColor}" stroke="#fff" stroke-width="1"/>
-      <polygon points="122,36 114,10 134,34" fill="${dragon.secondary}" stroke="#fff" stroke-width="1"/>
-      <!-- Glowing Eye -->
-      <rect x="128" y="46" width="11" height="9" rx="3" fill="#fff"/>
-      <rect x="132" y="48" width="6" height="6" rx="2" fill="${dragon.hornColor}"/>
-      <!-- Elemental Breath Spark -->
-      <circle cx="174" cy="58" r="9" fill="${dragon.secondary}" opacity="0.9"/>
-      <polygon points="164,58 188,48 180,62 194,66 168,66" fill="${dragon.hornColor}"/>
-      <!-- Claws / Feet -->
-      <rect x="72" y="126" width="18" height="12" rx="4" fill="${dragon.hornColor}"/>
-      <rect x="104" y="126" width="18" height="12" rx="4" fill="${dragon.hornColor}"/>
-    </g>
-  </svg>`;
-}
-
-function renderHeroSVG(heroClass = 'mage', size = 175) {
-  const colors = {
-    mage: { robe: '#9b5de5', trim: '#ffd166', orb: '#00f5d4' },
-    knight: { robe: '#118ab2', trim: '#06d6a0', orb: '#ffd166' },
-    alchemist: { robe: '#06d6a0', trim: '#f15bb5', orb: '#ffee32' },
-    ranger: { robe: '#ef476f', trim: '#ffd166', orb: '#4cc9f0' }
-  }[heroClass] || { robe: '#9b5de5', trim: '#ffd166', orb: '#00f5d4' };
-
-  return `
-  <svg viewBox="0 0 180 170" width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg">
-    <defs>
-      <radialGradient id="heroGlow" cx="50%" cy="50%" r="50%">
-        <stop offset="0%" stop-color="${colors.orb}" stop-opacity="0.5"/>
-        <stop offset="100%" stop-color="${colors.robe}" stop-opacity="0"/>
-      </radialGradient>
-    </defs>
-    <circle cx="90" cy="95" r="65" fill="url(#heroGlow)"/>
-    <!-- Cape -->
-    <path d="M58 75 L34 142 L88 135 Z" fill="${colors.trim}" opacity="0.8"/>
-    <!-- Voxel Body Armor -->
-    <rect x="62" y="74" width="48" height="56" rx="8" fill="${colors.robe}" stroke="${colors.trim}" stroke-width="3"/>
-    <!-- Belt & Rune Buckle -->
-    <rect x="62" y="106" width="48" height="10" fill="#1b2442"/>
-    <rect x="80" y="104" width="12" height="14" rx="2" fill="${colors.trim}"/>
-    <!-- Voxel Head -->
-    <rect x="66" y="34" width="40" height="38" rx="7" fill="#ffcdb2" stroke="#2b1d14" stroke-width="2.5"/>
-    <!-- Eyes -->
-    <rect x="74" y="48" width="7" height="9" rx="2" fill="#141b2d"/>
-    <rect x="92" y="48" width="7" height="9" rx="2" fill="#141b2d"/>
-    <rect x="75" y="49" width="3" height="3" fill="#fff"/>
-    <rect x="93" y="49" width="3" height="3" fill="#fff"/>
-    <!-- Wizard Hat / Voxel Helm -->
-    <polygon points="48,38 124,38 86,4" fill="${colors.robe}" stroke="${colors.trim}" stroke-width="3"/>
-    <!-- Magic Staff / Voxel Wand -->
-    <line x1="130" y1="36" x2="122" y2="142" stroke="#c97a3e" stroke-width="7" stroke-linecap="round"/>
-    <circle cx="132" cy="30" r="14" fill="${colors.orb}" stroke="#fff" stroke-width="2.5"/>
-    <polygon points="132,12 137,26 148,30 137,35 132,48 127,35 116,30 127,26" fill="#fff" opacity="0.85"/>
-    <!-- Boots -->
-    <rect x="66" y="130" width="16" height="14" rx="4" fill="#2b3863" stroke="${colors.trim}" stroke-width="2"/>
-    <rect x="90" y="130" width="16" height="14" rx="4" fill="#2b3863" stroke="${colors.trim}" stroke-width="2"/>
-  </svg>`;
-}
-
-function renderChestSVG(chest, isOpen = false) {
-  const lidOffset = isOpen ? 'transform="translate(0,-18) rotate(-12 60 40)"' : '';
-  return `
-  <svg viewBox="0 0 120 110" width="120" height="110" xmlns="http://www.w3.org/2000/svg">
-    <defs>
-      <radialGradient id="chestGlow_${chest.id}" cx="50%" cy="50%" r="50%">
-        <stop offset="0%" stop-color="${chest.trim}" stop-opacity="0.7"/>
-        <stop offset="100%" stop-color="${chest.colorBase}" stop-opacity="0"/>
-      </radialGradient>
-    </defs>
-    <circle cx="60" cy="60" r="52" fill="url(#chestGlow_${chest.id})"/>
-    <!-- Chest Base -->
-    <rect x="20" y="52" width="80" height="44" rx="8" fill="${chest.colorBase}" stroke="${chest.trim}" stroke-width="3.5"/>
-    <line x1="38" y1="52" x2="38" y2="96" stroke="${chest.trim}" stroke-width="3"/>
-    <line x1="82" y1="52" x2="82" y2="96" stroke="${chest.trim}" stroke-width="3"/>
-    ${isOpen ? `<ellipse cx="60" cy="52" rx="34" ry="12" fill="#fff3b0"/><polygon points="60,18 68,42 90,42 72,54 78,76 60,62 42,76 48,54 30,42 52,42" fill="#ffd166"/>` : ''}
-    <!-- Chest Lid -->
-    <g ${lidOffset}>
-      <path d="M18 52 Q60 20 102 52 Z" fill="${chest.colorTop}" stroke="${chest.trim}" stroke-width="3.5"/>
-      <rect x="18" y="44" width="84" height="12" rx="4" fill="${chest.colorTop}" stroke="${chest.trim}" stroke-width="3"/>
-      <!-- Crystal Lock -->
-      <rect x="51" y="43" width="18" height="22" rx="5" fill="${chest.trim}" stroke="#111" stroke-width="2"/>
-      <circle cx="60" cy="54" r="4" fill="#00f5d4"/>
-    </g>
-  </svg>`;
-}
-
-// --- STEM PROBLEM GENERATOR ENGINE (Elementary Grade 3-5 / Age 9 Focus) ---
-function randInt(min, max) {
+// ============================================================================
+// VISUAL STEM PROBLEM & DIAGRAM GENERATOR (Age 9 / Grade 3-4-5)
+// Draws actual visual block arrays, balance scales, potion flasks & circuits!
+// ============================================================================
+function rand(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-function shuffleArray(arr) {
-  const copy = [...arr];
-  for (let i = copy.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [copy[i], copy[j]] = [copy[j], copy[i]];
-  }
-  return copy;
-}
-
-function makeNumericOptions(correct, spread = 6) {
+function make3Choices(correct) {
   const set = new Set([String(correct)]);
-  while (set.size < 4) {
-    const delta = randInt(1, spread) * (Math.random() > 0.5 ? 1 : -1);
-    const candidate = Number(correct) + delta;
-    if (candidate >= 0) set.add(String(candidate));
+  while (set.size < 3) {
+    const offset = rand(1, 5) * (Math.random() > 0.5 ? 1 : -1);
+    const val = Number(correct) + offset;
+    if (val > 0) set.add(String(val));
   }
-  return shuffleArray([...set]);
+  return [...set].sort(() => Math.random() - 0.5);
 }
 
-function generateSTEMQuestion(topicFilter = 'all', gradeLevel = '4') {
-  const topics = ['equations', 'multiplication', 'geometry', 'fractions', 'science', 'logic'];
-  const chosenTopic = topicFilter === 'all' ? topics[randInt(0, topics.length - 1)] : topicFilter;
-  const scale = gradeLevel === '3' ? 0.75 : gradeLevel === '5' ? 1.35 : 1;
+function createVisualSTEMChallenge(level = 1) {
+  const types = ['array_mult', 'balance_eq', 'potion_frac', 'voxel_area', 'science_circuit'];
+  const type = types[rand(0, types.length - 1)];
 
-  if (chosenTopic === 'equations') {
-    const x = randInt(2, Math.round(9 * scale));
-    const a = randInt(2, 6);
-    const b = randInt(3, 15);
-    const total = a * x + b;
-    const ans = String(x);
+  if (type === 'array_mult') {
+    const rows = rand(2, 4);
+    const cols = rand(3, 6);
+    const ans = rows * cols;
     return {
-      category: '🔮 Algebraic Dragon Equation',
-      prompt: `Solve for the Mystery Dragon Rune (🐉):  ${a} × 🐉 + ${b} = ${total}`,
-      visual: `Scale Hint: Subtract ${b} from ${total} first (${total} - ${b} = ${total - b}), then divide by ${a}!`,
-      hint: `Step 1: ${total} - ${b} = ${total - b}. Step 2: What times ${a} equals ${total - b}?`,
-      correct: ans,
-      options: makeNumericOptions(x, 4)
-    };
-  }
-
-  if (chosenTopic === 'multiplication') {
-    const isDiv = Math.random() > 0.45;
-    const a = randInt(3, Math.round(11 * scale));
-    const b = randInt(3, 9);
-    if (!isDiv) {
-      const prod = a * b;
-      return {
-        category: '⚡ Power Array Multiplication',
-        prompt: `Your dragon fires ${a} volleys of ${b} Redstone fireballs each. How many fireballs in total? (${a} × ${b})`,
-        visual: `Voxel Grid: ${a} rows of ${b} blocks = ${a} × ${b}`,
-        hint: `Break it apart! (${a} × ${b - 1}) + ${a} = ${prod}`,
-        correct: String(prod),
-        options: makeNumericOptions(prod, 8)
-      };
-    } else {
-      const prod = a * b;
-      return {
-        category: '💎 Crystal Division Split',
-        prompt: `You mined ${prod} Mana Emeralds and share them equally among ${b} Dragons. How many emeralds does each get? (${prod} ÷ ${b})`,
-        visual: `Think inverse: ${b} × ? = ${prod}`,
-        hint: `Count by ${b}s until you reach ${prod}, or recall ${b} × ${a} = ${prod}!`,
-        correct: String(a),
-        options: makeNumericOptions(a, 5)
-      };
-    }
-  }
-
-  if (chosenTopic === 'geometry') {
-    const isArea = Math.random() > 0.45;
-    const w = randInt(4, 12);
-    const h = randInt(3, 10);
-    if (isArea) {
-      const area = w * h;
-      return {
-        category: '🏰 Minecraft Voxel Architecture (Area)',
-        prompt: `You build a rectangular Dragon Sanctuary floor that is ${w} blocks long and ${h} blocks wide. What is the Area in square blocks?`,
-        visual: `📐 Area Formula: Length × Width (${w} × ${h})`,
-        hint: `Multiply length (${w}) by width (${h}) to count all floor blocks inside!`,
-        correct: String(area),
-        options: makeNumericOptions(area, 8)
-      };
-    } else {
-      const perim = 2 * (w + h);
-      return {
-        category: '🛡️ Voxel Fortress Fence (Perimeter)',
-        prompt: `A Dragon Hatchery is ${w} blocks long and ${h} blocks wide. How many fence blocks do you need to go all the way around its Perimeter?`,
-        visual: `📐 Perimeter = ${w} + ${h} + ${w} + ${h}`,
-        hint: `Add Length + Width (${w} + ${h} = ${w + h}), then double it!`,
-        correct: String(perim),
-        options: makeNumericOptions(perim, 6)
-      };
-    }
-  }
-
-  if (chosenTopic === 'fractions') {
-    const denoms = [4, 6, 8, 10];
-    const d = denoms[randInt(0, denoms.length - 1)];
-    const n1 = randInt(1, d - 2);
-    const n2 = randInt(1, d - n1);
-    const sum = `${n1 + n2}/${d}`;
-    const opts = new Set([sum, `${n1 + n2}/${d * 2}`, `${Math.max(1, n1 + n2 - 1)}/${d}`, `${n1 + n2 + 1}/${d}`]);
-    return {
-      category: '🧪 Alchemist Potion Fractions',
-      prompt: `To brew a Dragon Heal Elixir, you mix ${n1}/${d} bottle of Starlight Dew with ${n2}/${d} bottle of Phoenix Nectar. How full is the bottle?`,
-      visual: `Potion Slices: [${'🟦'.repeat(n1)}${'🟪'.repeat(n2)}${'⬜'.repeat(d - n1 - n2)}] (${d} equal parts)`,
-      hint: `When denominators (bottom numbers) are the same (${d}), add the top numerators (${n1} + ${n2}) and keep ${d} on the bottom!`,
-      correct: sum,
-      options: shuffleArray([...opts])
-    };
-  }
-
-  if (chosenTopic === 'logic') {
-    constlogicBank = [
-      {
-        prompt: 'Redstone Pattern Lock! Find the next number in the dragon code:  4,  9,  14,  19,  ?',
-        visual: 'Pattern Jump: +5 each step → 4 (+5) 9 (+5) 14 (+5) 19 (+5) ?',
-        hint: 'Add 5 to 19!',
-        correct: '24',
-        options: ['22', '24', '25', '29']
-      },
-      {
-        prompt: 'A Redstone AND Gate only opens the Dragon Vault if BOTH switches are ON (1). If Switch A = 1 and Switch B = 0, what happens?',
-        visual: 'Logic Gate: [Switch A: ON] + [Switch B: OFF] ➔ [AND Gate]',
-        hint: 'An AND gate requires BOTH inputs to be 1 (ON)!',
-        correct: 'Vault stays CLOSED (0)',
-        options: ['Vault stays CLOSED (0)', 'Vault OPENS (1)', 'Both switches break', 'It turns into water']
-      },
-      {
-        prompt: 'Coding Loop Spell: If your Wizard runs "REPEAT 4 TIMES: [Move 3 blocks forward]", how many blocks does he move in total?',
-        visual: 'Loop Trace: 3 + 3 + 3 + 3',
-        hint: 'Multiply 4 repeats × 3 blocks per repeat!',
-        correct: '12 blocks',
-        options: ['7 blocks', '12 blocks', '9 blocks', '15 blocks']
-      },
-      {
-        prompt: 'Double Growth Sequence! Find the missing Dragon Power level:  3,  6,  12,  24,  ?',
-        visual: 'Multiplier Rule: Each number is multiplied by 2!',
-        hint: 'What is 24 × 2?',
-        correct: '48',
-        options: ['36', '48', '30', '52']
+      topic: '⚡ VOXEL POWER ARRAY',
+      prompt: `Count the Dragon Energy Cubes: ${rows} rows of ${cols} cubes! (${rows} × ${cols} = ?)`,
+      hint: `Add the ${rows} rows together: ${Array(rows).fill(cols).join(' + ')} = ${ans}!`,
+      correct: String(ans),
+      choices: make3Choices(ans),
+      drawDiagram: ctx => {
+        ctx.clearRect(0, 0, 540, 150);
+        const cubeS = 26;
+        const gap = 8;
+        const startX = (540 - (cols * (cubeS + gap))) / 2;
+        const startY = (150 - (rows * (cubeS + gap))) / 2;
+        for (let r = 0; r < rows; r++) {
+          for (let c = 0; c < cols; c++) {
+            const x = startX + c * (cubeS + gap);
+            const y = startY + r * (cubeS + gap);
+            ctx.fillStyle = '#06d6a0';
+            ctx.fillRect(x, y, cubeS, cubeS);
+            ctx.strokeStyle = '#ffd166';
+            ctx.lineWidth = 2.5;
+            ctx.strokeRect(x, y, cubeS, cubeS);
+          }
+        }
       }
-    ];
-    const item = constlogicBank[randInt(0, constlogicBank.length - 1)];
-    return {
-      category: '🤖 Redstone Coding & Logic',
-      prompt: item.prompt,
-      visual: item.visual,
-      hint: item.hint,
-      correct: item.correct,
-      options: shuffleArray(item.options)
     };
   }
 
-  // Science bank (Physics, Earth, Space, Biology for 9yo)
-  const scienceBank = [
+  if (type === 'balance_eq') {
+    const mult = rand(2, 4);
+    const eggVal = rand(3, 8);
+    const extra = rand(2, 9);
+    const total = mult * eggVal + extra;
+    return {
+      topic: '⚖️ DRAGON EGG BALANCE SCALE',
+      prompt: `Balance the Scale!  ${mult} × 🥚 + ${extra} = ${total}.  What is 1 🥚 worth?`,
+      hint: `First take away ${extra} from both sides (${total} - ${extra} = ${total - extra}), then split equally among ${mult} eggs!`,
+      correct: String(eggVal),
+      choices: make3Choices(eggVal),
+      drawDiagram: ctx => {
+        ctx.clearRect(0, 0, 540, 150);
+        // Balance beam
+        ctx.strokeStyle = '#ffd166';
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.moveTo(90, 95);
+        ctx.lineTo(450, 95);
+        ctx.stroke();
+        // Fulcrum triangle
+        ctx.fillStyle = '#9b5de5';
+        ctx.beginPath();
+        ctx.moveTo(270, 95);
+        ctx.lineTo(250, 138);
+        ctx.lineTo(290, 138);
+        ctx.closePath();
+        ctx.fill();
+        // Left side eggs + weight
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 20px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(`${'🥚'.repeat(mult)}  +  [${extra}]`, 170, 72);
+        ctx.fillStyle = '#ffd166';
+        ctx.fillText('=', 270, 75);
+        // Right side total weight
+        ctx.fillStyle = '#06d6a0';
+        ctx.fillRect(335, 42, 90, 42);
+        ctx.fillStyle = '#04241b';
+        ctx.font = 'bold 22px sans-serif';
+        ctx.fillText(`${total}`, 380, 70);
+      }
+    };
+  }
+
+  if (type === 'potion_frac') {
+    const denom = [4, 6, 8][rand(0, 2)];
+    const a = rand(1, denom - 2);
+    const b = rand(1, denom - a);
+    const ans = `${a + b}/${denom}`;
+    const cSet = new Set([ans, `${Math.max(1, a + b - 1)}/${denom}`, `${a + b}/${denom * 2}`]);
+    return {
+      topic: '🧪 ALCHEMIST DRAGON POTION',
+      prompt: `You pour ${a}/${denom} Blue Mana and ${b}/${denom} Purple Mana into the flask. How full is it?`,
+      hint: `Count the glowing filled bars out of ${denom}: ${a} + ${b} = ${a + b}, so ${a + b}/${denom}!`,
+      correct: ans,
+      choices: [...cSet].sort(() => Math.random() - 0.5),
+      drawDiagram: ctx => {
+        ctx.clearRect(0, 0, 540, 150);
+        const barW = 46;
+        const startX = (540 - denom * (barW + 6)) / 2;
+        for (let i = 0; i < denom; i++) {
+          const x = startX + i * (barW + 6);
+          ctx.fillStyle = i < a ? '#00bbf9' : i < a + b ? '#9b5de5' : '#182246';
+          ctx.fillRect(x, 42, barW, 65);
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth = 2;
+          ctx.strokeRect(x, 42, barW, 65);
+        }
+        ctx.fillStyle = '#ffd166';
+        ctx.font = 'bold 16px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(`${a} Blue + ${b} Purple out of ${denom} equal parts`, 270, 132);
+      }
+    };
+  }
+
+  if (type === 'voxel_area') {
+    const w = rand(4, 8);
+    const h = rand(3, 5);
+    const area = w * h;
+    return {
+      topic: '🏰 MINECRAFT FORTRESS BLUEPRINT',
+      prompt: `This Dragon Landing Pad is ${w} blocks wide and ${h} blocks tall. How many total floor blocks is its Area?`,
+      hint: `Area = Length × Width ➔ ${w} × ${h} = ${area} blocks!`,
+      correct: String(area),
+      choices: make3Choices(area),
+      drawDiagram: ctx => {
+        ctx.clearRect(0, 0, 540, 150);
+        const s = 22;
+        const sx = (540 - w * s) / 2;
+        const sy = (150 - h * s) / 2 + 8;
+        for (let r = 0; r < h; r++) {
+          for (let c = 0; c < w; c++) {
+            ctx.fillStyle = (r + c) % 2 === 0 ? '#ffd166' : '#f4a261';
+            ctx.fillRect(sx + c * s, sy + r * s, s - 2, s - 2);
+          }
+        }
+        ctx.fillStyle = '#06d6a0';
+        ctx.font = 'bold 16px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(`Width: ${w} blocks`, 270, sy - 8);
+        ctx.fillText(`Height: ${h}`, sx - 45, sy + (h * s) / 2);
+      }
+    };
+  }
+
+  // Science visual challenge
+  const sciVisuals = [
     {
-      prompt: 'When Ignis the Dragon heats solid ice cubes until they melt into liquid water and then boil into steam, what causes the change of state?',
-      visual: '🧊 Solid Ice ➔ (+Heat Energy) ➔ 💧 Liquid Water ➔ (+Heat Energy) ➔ ☁️ Gas Steam',
-      hint: 'Adding thermal (heat) energy makes molecules move faster!',
-      correct: 'Adding thermal (heat) energy',
-      options: ['Adding thermal (heat) energy', 'Removing gravity', 'Turning off magnetic poles', 'Freezing the atoms']
+      topic: '🔬 THERMAL DRAGON SCIENCE',
+      prompt: 'When Ignis heats Solid Ice Cubes with dragon fire, what state of matter does ice melt into first?',
+      hint: 'Follow the arrow: Solid Ice melts into Liquid Water before boiling into Gas Steam!',
+      correct: 'Liquid Water 💧',
+      choices: ['Liquid Water 💧', 'Solid Rock 🪨', 'Magnetic Iron 🧲'],
+      drawDiagram: ctx => {
+        ctx.clearRect(0, 0, 540, 150);
+        ctx.font = 'bold 22px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#4cc9f0';
+        ctx.fillText('🧊 Solid Ice', 110, 80);
+        ctx.fillStyle = '#ff9f1c';
+        ctx.fillText('🔥 +Heat ➔', 240, 80);
+        ctx.fillStyle = '#ffd166';
+        ctx.fillText('❓ [ ? ]', 380, 80);
+      }
     },
     {
-      prompt: 'Which planet in our Solar System is famous for its giant system of icy rings and dozens of moons?',
-      visual: '☀️ Sun ➔ Mercury, Venus, Earth, Mars, Jupiter, 🪐 [Ringed Giant], Uranus, Neptune',
-      hint: 'It is the 6th planet from the Sun!',
-      correct: 'Saturn',
-      options: ['Saturn', 'Mars', 'Mercury', 'Venus']
-    },
-    {
-      prompt: 'Green plants in the Emerald Voxel Woods use sunlight, water, and carbon dioxide to make their own food. What is this process called?',
-      visual: '☀️ Sunlight + 💧 Water + CO₂ ➔ 🌿 Plant Sugar + Oxygen',
-      hint: '"Photo" means light, and "synthesis" means putting together!',
-      correct: 'Photosynthesis',
-      options: ['Photosynthesis', 'Condensation', 'hibernation', 'Magnetism']
-    },
-    {
-      prompt: 'You use a long wooden plank balanced on a stone block (fulcrum) to lift a heavy Dragon Egg. Which simple machine are you using?',
-      visual: '🪨 [Egg] ━━━━━━▲━━━━━━ ⬇️ [Push Down]',
-      hint: 'A seesaw or crowbar is an example of this simple machine!',
-      correct: 'A Lever',
-      options: ['A Lever', 'A Pulley', 'A Wedge', 'A Gear']
-    },
-    {
-      prompt: 'What invisible force pulls jumped Minecraft blocks and flying dragons back down toward the ground?',
-      visual: '🐉 ⬇️ 🌍 Earth pulls objects toward its center',
-      hint: 'Sir Isaac Newton studied this force when watching a falling apple!',
-      correct: 'Gravity',
-      options: ['Gravity', 'Friction', 'Static Electricity', 'Photosynthesis']
-    },
-    {
-      prompt: 'When two magnets have their NORTH poles pushed directly toward each other (N ➡️ ⬅️ N), what happens?',
-      visual: '🧲 [S | N]  ⚡  [N | S] 🧲',
-      hint: 'Opposite poles attract, but LIKE poles push apart!',
-      correct: 'They repel (push away from each other)',
-      options: ['They repel (push away from each other)', 'They stick tightly together', 'They melt into lava', 'They lose all weight']
+      topic: '⚡ REDSTONE CIRCUIT SCIENCE',
+      prompt: 'To make the Redstone Dragon Lamp glow, what must be true about the circuit loop?',
+      hint: 'Electricity only flows when the loop is completely CLOSED with no gaps!',
+      correct: 'The loop is CLOSED ⚡',
+      choices: ['The loop is CLOSED ⚡', 'The wire is cut in half ✂️', 'The battery is removed 🔋'],
+      drawDiagram: ctx => {
+        ctx.clearRect(0, 0, 540, 150);
+        ctx.strokeStyle = '#06d6a0';
+        ctx.lineWidth = 4;
+        ctx.strokeRect(150, 35, 240, 80);
+        ctx.fillStyle = '#ffd166';
+        ctx.font = 'bold 20px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('🔋 Battery', 150, 80);
+        ctx.fillText('💡 Glowing Lamp', 390, 80);
+      }
     }
   ];
-  const sci = scienceBank[randInt(0, scienceBank.length - 1)];
-  return {
-    category: '🔬 Elemental STEM Science',
-    prompt: sci.prompt,
-    visual: sci.visual,
-    hint: sci.hint,
-    correct: sci.correct,
-    options: shuffleArray(sci.options)
-  };
+  return sciVisuals[rand(0, sciVisuals.length - 1)];
 }
 
 // ============================================================================
-// MAIN GAME STATE & CONTROLLER
+// MAIN FULLSCREEN GAME ENGINE
 // ============================================================================
-class DragonCraftGame {
+class DragonCraftWorld {
   constructor() {
-    this.profiles = this.loadProfiles();
-    this.player = null;
-    this.selectedClass = 'mage';
-    this.selectedStarter = 'ignis';
+    this.canvas = document.getElementById('gameCanvas');
+    this.ctx = this.canvas.getContext('2d');
+    this.resize();
+    window.addEventListener('resize', () => this.resize());
 
-    // World Map state
-    this.currentRealm = 0;
-    this.gridCols = 16;
-    this.gridRows = 10;
-    this.heroPos = { x: 2, y: 5 };
-    this.worldEntities = [];
+    // Load or initialize player save
+    this.state = this.loadSave();
+
+    // Game Modes: 'WORLD' | 'BATTLE'
+    this.mode = 'WORLD';
+    this.shakeTime = 0;
+    this.shakeMag = 0;
+
+    // Isometric Map Grid (9x9 floating island)
+    this.gridSize = 9;
+    this.hero = {
+      x: 1,
+      y: 4,
+      targetX: 1,
+      targetY: 4,
+      trail: []
+    };
+
+    // Curated 3-Step Island Encounters along the Golden Path!
+    this.setupIslandEncounters();
+
+    // Particles & Floating Texts
     this.particles = [];
+    this.floatTexts = [];
+    this.ambientEmbers = Array.from({ length: 35 }, () => ({
+      x: Math.random() * window.innerWidth,
+      y: Math.random() * window.innerHeight,
+      r: 2 + Math.random() * 3,
+      vy: -0.4 - Math.random() * 0.8,
+      color: Math.random() > 0.5 ? '#ffd166' : '#06d6a0'
+    }));
 
     // Battle state
     this.battle = {
-      active: false,
-      enemy: null,
+      enemy: DRAGONS[1],
       enemyHp: 100,
       enemyMaxHp: 100,
-      heroHp: 120,
-      heroMaxHp: 120,
-      pendingSpell: null,
-      currentQuestion: null,
-      usedHint: false
+      heroHp: 100,
+      heroMaxHp: 100,
+      laserAnim: 0,
+      tameAnim: 0,
+      isBoss: false
     };
 
-    this.initDOM();
-    this.renderSavedProfiles();
+    // 3-Tap Chest state
+    this.chestState = {
+      taps: 0,
+      opened: false,
+      shake: 0,
+      pendingReward: null
+    };
+
+    this.bindEvents();
+    this.updateHUD();
+    requestAnimationFrame(t => this.loop(t));
   }
 
-  loadProfiles() {
+  loadSave() {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      return raw ? JSON.parse(raw) : {};
-    } catch (e) {
-      return {};
-    }
-  }
-
-  saveProfiles() {
-    if (this.player) {
-      this.profiles[this.player.username.toLowerCase()] = this.player;
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(this.profiles));
-        localStorage.setItem(ACTIVE_USER_KEY, this.player.username.toLowerCase());
-      } catch (e) {}
-    }
-  }
-
-  createFreshProfile(username, pin, heroClass, starterDragon) {
+      const raw = localStorage.getItem(SAVE_KEY);
+      if (raw) return JSON.parse(raw);
+    } catch (e) {}
     return {
-      username,
-      pin: pin || '1234',
-      heroClass,
+      name: 'Leo the Dragonborn',
       level: 1,
       xp: 0,
-      xpToNext: 100,
-      points: 150, // Starter bonus points so he can open a chest or explore right away!
-      streak: 0,
-      activeDragon: starterDragon,
-      dragons: [starterDragon],
-      dragonLevels: { [starterDragon]: 1 },
-      ores: { emerald: 2, redstone: 2, diamond: 1, gold: 2, amethyst: 1 },
-      chestsOwned: { oak: 1, gilded: 0, arcane: 0, mythic: 0 }, // 1 Free Starter Surprise Chest!
-      relics: [],
-      achievements: [],
-      craftedBuilds: [],
-      settings: { grade: '4', topic: 'all' },
-      stats: {
-        correctAnswers: 0,
-        totalAttempts: 0,
-        bestStreak: 0,
-        dragonsDefeated: 0,
-        blocksMined: 0,
-        chestsOpened: 0
-      }
+      xpNext: 100,
+      coins: 100,
+      streak: 1,
+      islandIndex: 0,
+      stageOnIsland: 0, // 0: Crystal, 1: Guardian Dragon, 2: Boss Dragon + Chest
+      dragons: ['ignis'],
+      activeDragonIdx: 0,
+      gear: [] // 'crown_gold', 'wings_aether', 'staff_nether', 'pet_star'
     };
   }
 
-  initDOM() {
-    // Class picker
-    document.querySelectorAll('.class-option').forEach(el => {
-      el.addEventListener('click', () => {
-        document.querySelectorAll('.class-option').forEach(x => x.classList.remove('selected'));
-        el.classList.add('selected');
-        this.selectedClass = el.dataset.class;
-      });
+  save() {
+    try {
+      localStorage.setItem(SAVE_KEY, JSON.stringify(this.state));
+    } catch (e) {}
+  }
+
+  resize() {
+    this.canvas.width = window.innerWidth;
+    this.canvas.height = window.innerHeight;
+  }
+
+  setupIslandEncounters() {
+    // A clear, curated Golden Path from (1,4) -> (4,4) -> (4,2) -> (7,2)
+    this.goldenPath = [
+      { x: 1, y: 4 },
+      { x: 2, y: 4 },
+      { x: 3, y: 4 },
+      { x: 4, y: 4 }, // Stage 0: Redstone Mana Crystal
+      { x: 4, y: 3 },
+      { x: 4, y: 2 }, // Stage 1: Wild Guardian Dragon
+      { x: 5, y: 2 },
+      { x: 6, y: 2 },
+      { x: 7, y: 2 }  // Stage 2: Island Boss Dragon & Mystery Chest
+    ];
+
+    const stageTargets = [
+      { x: 4, y: 4, label: '✨ Walk along the Golden Tiles to the Glowing Mana Crystal!' },
+      { x: 4, y: 2, label: '⚔️ Approach the Wild Guardian Dragon on the Golden Path!' },
+      { x: 7, y: 2, label: '👑 Challenge the Island Boss Dragon to unlock the Giant Chest!' }
+    ];
+
+    const s = Math.min(2, this.state.stageOnIsland || 0);
+    this.currentTarget = stageTargets[s];
+    this.updateHUD();
+  }
+
+  bindEvents() {
+    // 1-Click Play Button
+    const nameInput = document.getElementById('heroNameInput');
+    nameInput.value = this.state.name;
+
+    document.getElementById('btnPlayNow').addEventListener('click', () => {
+      sfx.init();
+      sfx.spellCharge();
+      const typed = nameInput.value.trim();
+      if (typed) this.state.name = typed;
+      this.save();
+      this.updateHUD();
+      document.getElementById('titleOverlay').classList.add('hidden');
     });
 
-    // Starter dragon picker
-    document.querySelectorAll('.dragon-option').forEach(el => {
-      el.addEventListener('click', () => {
-        document.querySelectorAll('.dragon-option').forEach(x => x.classList.remove('selected'));
-        el.classList.add('selected');
-        this.selectedStarter = el.dataset.dragon;
-      });
+    // Click anywhere on canvas to walk along the island (or click directly on the glowing objective!)
+    this.canvas.addEventListener('pointerdown', e => {
+      if (this.mode !== 'WORLD') return;
+      sfx.init();
+
+      // Convert screen click to isometric grid or step toward target!
+      const iso = this.screenToIso(e.clientX, e.clientY);
+      if (iso.gx >= 0 && iso.gx < this.gridSize && iso.gy >= 0 && iso.gy < this.gridSize) {
+        this.hero.targetX = iso.gx;
+        this.hero.targetY = iso.gy;
+      } else if (this.currentTarget) {
+        this.hero.targetX = this.currentTarget.x;
+        this.hero.targetY = this.currentTarget.y;
+      }
     });
 
-    // Login button
-    document.getElementById('btnStartAdventure').addEventListener('click', () => this.handleLogin());
-    document.getElementById('btnQuickDemo').addEventListener('click', () => {
-      document.getElementById('loginUsername').value = 'DragonMasterLeo';
-      document.getElementById('loginPin').value = '7777';
-      this.handleLogin();
-    });
-
-    // Nav tabs
-    document.querySelectorAll('.nav-tab').forEach(tab => {
-      tab.addEventListener('click', () => this.switchTab(tab.dataset.tab));
-    });
-
-    // World Canvas & Controls
-    this.canvas = document.getElementById('worldCanvas');
-    this.ctx = this.canvas.getContext('2d');
-    this.canvas.addEventListener('click', e => this.handleCanvasClick(e));
-
+    // Keyboard WASD / Arrows also move directly toward target or grid
     window.addEventListener('keydown', e => {
-      if (!this.player || !document.getElementById('tab-world').classList.contains('active')) return;
-      if (!document.getElementById('stemModal').classList.contains('hidden')) return;
-      const keyMap = {
+      if (this.mode !== 'WORLD') return;
+      if (!document.getElementById('titleOverlay').classList.contains('hidden')) return;
+      if (!document.getElementById('spellForgeOverlay').classList.contains('hidden')) return;
+
+      const map = {
         ArrowUp: [0, -1], KeyW: [0, -1],
         ArrowDown: [0, 1], KeyS: [0, 1],
         ArrowLeft: [-1, 0], KeyA: [-1, 0],
         ArrowRight: [1, 0], KeyD: [1, 0]
       };
-      if (keyMap[e.code]) {
+      if (map[e.code]) {
         e.preventDefault();
-        this.moveHero(keyMap[e.code][0], keyMap[e.code][1]);
+        this.hero.targetX = Math.max(0, Math.min(this.gridSize - 1, Math.round(this.hero.x) + map[e.code][0]));
+        this.hero.targetY = Math.max(0, Math.min(this.gridSize - 1, Math.round(this.hero.y) + map[e.code][1]));
       }
     });
 
-    document.querySelectorAll('.dpad-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const dir = btn.dataset.dir;
-        if (dir === 'up') this.moveHero(0, -1);
-        if (dir === 'down') this.moveHero(0, 1);
-        if (dir === 'left') this.moveHero(-1, 0);
-        if (dir === 'right') this.moveHero(1, 0);
-      });
+    // Cycle active lead dragon
+    document.getElementById('btnSwapDragon').addEventListener('click', () => {
+      this.state.activeDragonIdx = (this.state.activeDragonIdx + 1) % this.state.dragons.length;
+      sfx.coin();
+      this.save();
+      this.updateHUD();
     });
 
-    // Battle Spells
-    document.querySelectorAll('.spell-card').forEach(card => {
-      card.addEventListener('click', () => this.initiateSpell(card.dataset.spell));
+    // Mute button
+    document.getElementById('btnSound').addEventListener('click', () => {
+      sfx.muted = !sfx.muted;
+      document.getElementById('btnSound').textContent = sfx.muted ? '🔇' : '🔊';
     });
 
-    document.getElementById('btnNewWildDragon').addEventListener('click', () => this.spawnRandomBattle());
-    document.getElementById('btnShowHint').addEventListener('click', () => this.showQuestionHint());
-    document.getElementById('btnCloseStemModal').addEventListener('click', () => {
-      document.getElementById('stemModal').classList.add('hidden');
+    // Battle Action Buttons
+    document.getElementById('btnCastSpell').addEventListener('click', () => {
+      this.openSpellForge('ATTACK');
+    });
+    document.getElementById('btnTameDragon').addEventListener('click', () => {
+      this.openSpellForge('TAME');
     });
 
-    document.getElementById('btnCloseSurprise').addEventListener('click', () => {
-      document.getElementById('surpriseModal').classList.add('hidden');
+    // 3-Tap Chest Canvas Interaction
+    document.getElementById('chestCanvas').addEventListener('pointerdown', () => {
+      this.handleChestTap();
     });
 
-    document.getElementById('btnSoundToggle').addEventListener('click', () => {
-      sfx.enabled = !sfx.enabled;
-      document.getElementById('btnSoundToggle').textContent = sfx.enabled ? '🔊 Sound: ON' : '🔇 Sound: OFF';
+    document.getElementById('btnContinueFromChest').addEventListener('click', () => {
+      document.getElementById('chestOverlay').classList.add('hidden');
+      this.updateHUD();
     });
-
-    document.getElementById('btnSwitchHero').addEventListener('click', () => {
-      document.getElementById('loginOverlay').classList.remove('hidden');
-      this.renderSavedProfiles();
-    });
-
-    // Parent / Curriculum settings
-    document.getElementById('selectGradeLevel').addEventListener('change', e => {
-      if (this.player) {
-        this.player.settings.grade = e.target.value;
-        this.saveProfiles();
-        this.showToast(`📚 Curriculum tuned to Grade ${e.target.value} STEM!`);
-      }
-    });
-    document.getElementById('selectTopicFocus').addEventListener('change', e => {
-      if (this.player) {
-        this.player.settings.topic = e.target.value;
-        this.saveProfiles();
-        this.showToast(`🎯 Spell Topic Filter updated!`);
-      }
-    });
-
-    // Start animation loop
-    requestAnimationFrame(() => this.animateWorldLoop());
   }
 
-  renderSavedProfiles() {
-    const list = document.getElementById('savedProfilesList');
-    const keys = Object.keys(this.profiles);
-    if (keys.length === 0) {
-      document.getElementById('savedProfilesWrap').style.display = 'none';
-      return;
+  updateHUD() {
+    const biome = BIOMES[this.state.islandIndex % BIOMES.length];
+    document.getElementById('hudLevelStar').textContent = this.state.level;
+    document.getElementById('hudHeroName').textContent = this.state.name;
+    document.getElementById('hudCoins').textContent = `⭐ ${this.state.coins}`;
+    document.getElementById('hudXpFill').style.width = `${Math.min(100, (this.state.xp / this.state.xpNext) * 100)}%`;
+
+    document.getElementById('questRealmLabel').textContent = biome.name;
+    if (this.mode === 'WORLD' && this.currentTarget) {
+      document.getElementById('questObjectiveText').textContent = this.currentTarget.label;
+    } else if (this.mode === 'BATTLE') {
+      document.getElementById('questObjectiveText').textContent = `⚔️ Cast STEM Spells to defeat or tame ${this.battle.enemy.name}!`;
     }
-    document.getElementById('savedProfilesWrap').style.display = 'block';
-    list.innerHTML = keys.map(k => {
-      const p = this.profiles[k];
-      return `<button class="profile-pill" data-user="${p.username}">🧙 ${p.username} (Lv.${p.level} • ⭐ ${p.points})</button>`;
-    }).join('');
-    list.querySelectorAll('.profile-pill').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const u = btn.dataset.user;
-        const prof = this.profiles[u.toLowerCase()];
-        if (prof) {
-          document.getElementById('loginUsername').value = prof.username;
-          document.getElementById('loginPin').value = prof.pin;
-          this.handleLogin();
-        }
-      });
-    });
+
+    const activeId = this.state.dragons[this.state.activeDragonIdx % this.state.dragons.length] || 'ignis';
+    const dObj = DRAGONS.find(d => d.id === activeId) || DRAGONS[0];
+    document.getElementById('hudDragonText').textContent = `${dObj.name.split(' ')[0]} (${this.state.dragons.length} Following)`;
   }
 
-  handleLogin() {
-    const rawName = document.getElementById('loginUsername').value.trim() || 'ProdigyCrafter';
-    const pin = document.getElementById('loginPin').value.trim() || '1234';
-    const key = rawName.toLowerCase();
+  // ==========================================================================
+  // ISOMETRIC 3D VOXEL PROJECTION HELPERS
+  // ==========================================================================
+  isoToScreen(gx, gy, gz = 0) {
+    const tileW = 76;
+    const tileH = 38;
+    const originX = this.canvas.width / 2;
+    const originY = this.canvas.height * 0.28;
+    const sx = originX + (gx - gy) * (tileW / 2);
+    const sy = originY + (gx + gy) * (tileH / 2) - gz * 36;
+    return { x: sx, y: sy };
+  }
 
-    if (this.profiles[key]) {
-      this.player = this.profiles[key];
-      this.showToast(`✨ Welcome back, ${this.player.username}! Ready for Dragon STEM quests!`);
+  screenToIso(sx, sy) {
+    const tileW = 76;
+    const tileH = 38;
+    const dx = sx - this.canvas.width / 2;
+    const dy = sy - this.canvas.height * 0.28;
+    const gx = Math.round((dx / (tileW / 2) + dy / (tileH / 2)) / 2);
+    const gy = Math.round((dy / (tileH / 2) - dx / (tileW / 2)) / 2);
+    return { gx, gy };
+  }
+
+  drawIsoBlock(gx, gy, gz, heightPx, topColor, leftColor, rightColor, glowOutline = false) {
+    const ctx = this.ctx;
+    const p = this.isoToScreen(gx, gy, gz);
+    const w = 38;
+    const h = 19;
+
+    // Top diamond face
+    ctx.beginPath();
+    ctx.moveTo(p.x, p.y - h);
+    ctx.lineTo(p.x + w, p.y);
+    ctx.lineTo(p.x, p.y + h);
+    ctx.lineTo(p.x - w, p.y);
+    ctx.closePath();
+    ctx.fillStyle = topColor;
+    ctx.fill();
+    if (glowOutline) {
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+    }
+
+    // Left face
+    ctx.beginPath();
+    ctx.moveTo(p.x - w, p.y);
+    ctx.lineTo(p.x, p.y + h);
+    ctx.lineTo(p.x, p.y + h + heightPx);
+    ctx.lineTo(p.x - w, p.y + heightPx);
+    ctx.closePath();
+    ctx.fillStyle = leftColor;
+    ctx.fill();
+
+    // Right face
+    ctx.beginPath();
+    ctx.moveTo(p.x + w, p.y);
+    ctx.lineTo(p.x, p.y + h);
+    ctx.lineTo(p.x, p.y + h + heightPx);
+    ctx.lineTo(p.x + w, p.y + heightPx);
+    ctx.closePath();
+    ctx.fillStyle = rightColor;
+    ctx.fill();
+  }
+
+  // ==========================================================================
+  // CHARACTER & DRAGON SPRITE RENDERERS (Animated 60fps Canvas Art)
+  // ==========================================================================
+  drawWizardSprite(sx, sy, time, scale = 1) {
+    const ctx = this.ctx;
+    ctx.save();
+    ctx.translate(sx, sy);
+    ctx.scale(scale, scale);
+
+    const bob = Math.sin(time * 0.008) * 4;
+
+    // Shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.45)';
+    ctx.beginPath();
+    ctx.ellipse(0, 8, 20, 9, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Unlocked Aether Wings!
+    if (this.state.gear.includes('wings_aether')) {
+      const flap = Math.sin(time * 0.012) * 10;
+      ctx.fillStyle = '#00f5d4';
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2;
+      // Left wing
+      ctx.beginPath();
+      ctx.moveTo(-8, -28 + bob);
+      ctx.lineTo(-42, -52 + bob + flap);
+      ctx.lineTo(-32, -16 + bob);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      // Right wing
+      ctx.beginPath();
+      ctx.moveTo(8, -28 + bob);
+      ctx.lineTo(42, -52 + bob + flap);
+      ctx.lineTo(32, -16 + bob);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+    }
+
+    // Voxel Wizard Robe
+    ctx.fillStyle = '#7209b7';
+    ctx.strokeStyle = '#ffd166';
+    ctx.lineWidth = 2.5;
+    ctx.fillRect(-14, -36 + bob, 28, 34);
+    ctx.strokeRect(-14, -36 + bob, 28, 34);
+
+    // Voxel Head
+    ctx.fillStyle = '#ffcdb2';
+    ctx.fillRect(-12, -58 + bob, 24, 22);
+    ctx.strokeRect(-12, -58 + bob, 24, 22);
+
+    // Eyes
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(-7, -50 + bob, 4, 6);
+    ctx.fillRect(3, -50 + bob, 4, 6);
+
+    // Hat or Unlocked Golden Crown!
+    if (this.state.gear.includes('crown_gold')) {
+      ctx.fillStyle = '#ffd166';
+      ctx.beginPath();
+      ctx.moveTo(-14, -58 + bob);
+      ctx.lineTo(-14, -74 + bob);
+      ctx.lineTo(-6, -65 + bob);
+      ctx.lineTo(0, -76 + bob);
+      ctx.lineTo(6, -65 + bob);
+      ctx.lineTo(14, -74 + bob);
+      ctx.lineTo(14, -58 + bob);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
     } else {
-      this.player = this.createFreshProfile(rawName, pin, this.selectedClass, this.selectedStarter);
-      this.saveProfiles();
-      this.showToast(`🎉 Hero Profile Created! Check your Chests Vault for a Free Starter Chest!`);
+      ctx.fillStyle = '#3c096c';
+      ctx.beginPath();
+      ctx.moveTo(-20, -58 + bob);
+      ctx.lineTo(20, -58 + bob);
+      ctx.lineTo(0, -86 + bob);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
     }
 
-    sfx.spellSuccess();
-    document.getElementById('loginOverlay').classList.add('hidden');
-    this.generateRealmEntities();
-    this.spawnRandomBattle();
-    this.updateAllUI();
+    // Glowing Magic Staff
+    const hasSuperStaff = this.state.gear.includes('staff_nether');
+    ctx.strokeStyle = hasSuperStaff ? '#ef476f' : '#c97a3e';
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(18, -4 + bob);
+    ctx.lineTo(24, -56 + bob);
+    ctx.stroke();
+
+    ctx.fillStyle = hasSuperStaff ? '#ffd166' : '#00f5d4';
+    ctx.beginPath();
+    ctx.arc(24, -60 + bob, hasSuperStaff ? 10 : 7, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Unlocked Orbiting Mini-Star!
+    if (this.state.gear.includes('pet_star')) {
+      const ox = Math.cos(time * 0.006) * 36;
+      const oy = Math.sin(time * 0.006) * 14 - 40 + bob;
+      ctx.fillStyle = '#ffd166';
+      ctx.beginPath();
+      ctx.arc(ox, oy, 7, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    ctx.restore();
   }
 
-  switchTab(tabId) {
-    document.querySelectorAll('.nav-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tabId));
-    document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === `tab-${tabId}`));
-    this.updateAllUI();
+  drawDragonSprite(sx, sy, dragon, time, scale = 1, flipX = false) {
+    const ctx = this.ctx;
+    ctx.save();
+    ctx.translate(sx, sy);
+    ctx.scale(flipX ? -scale : scale, scale);
+
+    const hover = Math.sin(time * 0.007 + sx) * 7;
+    const wingFlap = Math.sin(time * 0.015) * 18;
+
+    // Ground shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
+    ctx.beginPath();
+    ctx.ellipse(0, 18, 26, 10, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Aura glow
+    const grad = ctx.createRadialGradient(0, -28 + hover, 4, 0, -28 + hover, 48);
+    grad.addColorStop(0, dragon.wing + '66');
+    grad.addColorStop(1, 'transparent');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(0, -28 + hover, 48, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Back Wing
+    ctx.fillStyle = dragon.wing;
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(-6, -34 + hover);
+    ctx.lineTo(-42, -68 + hover + wingFlap);
+    ctx.lineTo(-28, -22 + hover);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // Tail
+    ctx.strokeStyle = dragon.color;
+    ctx.lineWidth = 8;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(-16, -18 + hover);
+    ctx.quadraticCurveTo(-42, -10 + hover, -48, -28 + hover - wingFlap * 0.3);
+    ctx.stroke();
+
+    // Voxel Dragon Body
+    ctx.fillStyle = dragon.color;
+    ctx.strokeStyle = dragon.wing;
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.roundRect(-20, -42 + hover, 40, 32, 10);
+    ctx.fill();
+    ctx.stroke();
+
+    // Belly plate
+    ctx.fillStyle = dragon.belly;
+    ctx.fillRect(-6, -36 + hover, 20, 22);
+
+    // Front Wing
+    ctx.fillStyle = dragon.wing;
+    ctx.beginPath();
+    ctx.moveTo(0, -34 + hover);
+    ctx.lineTo(-32, -74 + hover + wingFlap);
+    ctx.lineTo(-14, -22 + hover);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // Dragon Head & Snout
+    ctx.fillStyle = dragon.color;
+    ctx.beginPath();
+    ctx.roundRect(8, -62 + hover, 30, 24, 7);
+    ctx.fill();
+    ctx.stroke();
+
+    // Horns
+    ctx.fillStyle = dragon.wing;
+    ctx.beginPath();
+    ctx.moveTo(12, -62 + hover);
+    ctx.lineTo(2, -78 + hover);
+    ctx.lineTo(20, -62 + hover);
+    ctx.closePath();
+    ctx.fill();
+
+    // Glowing Eye
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(24, -56 + hover, 7, 7);
+    ctx.fillStyle = '#090d1a';
+    ctx.fillRect(27, -54 + hover, 4, 4);
+
+    // Flame breath spark
+    ctx.fillStyle = dragon.wing;
+    ctx.beginPath();
+    ctx.arc(44, -48 + hover, 5 + Math.sin(time * 0.02) * 2, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
   }
 
-  // --- WORLD MAP LOGIC ---
-  generateRealmEntities() {
-    this.worldEntities = [];
-    const realm = REALMS[this.currentRealm];
+  // ==========================================================================
+  // MAIN GAME LOOP (World Exploration & Cinematic Battle)
+  // ==========================================================================
+  loop(time) {
+    const ctx = this.ctx;
+    const W = this.canvas.width;
+    const H = this.canvas.height;
 
-    // Spawn 4 Wild Dragons on the map
-    for (let i = 0; i < 4; i++) {
-      const dId = realm.dragonPool[i % realm.dragonPool.length];
-      this.worldEntities.push({
-        type: 'dragon',
-        dragonId: dId,
-        x: randInt(3, this.gridCols - 2),
-        y: randInt(1, this.gridRows - 2),
-        label: DRAGONS.find(d => d.id === dId).name.split(' ')[0]
-      });
+    ctx.save();
+    if (this.shakeTime > 0) {
+      this.shakeTime--;
+      const dx = (Math.random() - 0.5) * this.shakeMag;
+      const dy = (Math.random() - 0.5) * this.shakeMag;
+      ctx.translate(dx, dy);
     }
 
-    // Spawn 6 STEM Voxel Ore Blocks
-    const oreTypes = [
-      { id: 'emerald', color: '#06d6a0', label: 'Emerald Ore' },
-      { id: 'redstone', color: '#ef476f', label: 'Redstone Ore' },
-      { id: 'diamond', color: '#4cc9f0', label: 'Diamond Ore' },
-      { id: 'gold', color: '#ffd166', label: 'Gold Ore' },
-      { id: 'amethyst', color: '#9b5de5', label: 'Amethyst Ore' }
-    ];
-    for (let i = 0; i < 6; i++) {
-      const ore = oreTypes[i % oreTypes.length];
-      this.worldEntities.push({
-        type: 'ore',
-        oreId: ore.id,
-        color: ore.color,
-        label: ore.label,
-        x: randInt(1, this.gridCols - 2),
-        y: randInt(1, this.gridRows - 2)
-      });
+    if (this.mode === 'WORLD') {
+      this.updateWorld(time);
+      this.renderWorld(time, W, H);
+    } else if (this.mode === 'BATTLE') {
+      this.renderBattle(time, W, H);
     }
 
-    // Spawn 2 Mystery World Chests
-    for (let i = 0; i < 2; i++) {
-      this.worldEntities.push({
-        type: 'chest',
-        x: randInt(4, this.gridCols - 2),
-        y: randInt(1, this.gridRows - 2)
-      });
+    this.updateAndDrawParticles(ctx);
+    ctx.restore();
+
+    requestAnimationFrame(t => this.loop(t));
+  }
+
+  updateWorld(time) {
+    // Smoothly move hero toward target tile
+    const dx = this.hero.targetX - this.hero.x;
+    const dy = this.hero.targetY - this.hero.y;
+    const dist = Math.hypot(dx, dy);
+
+    if (dist > 0.05) {
+      const speed = 0.065;
+      this.hero.x += (dx / dist) * Math.min(speed, dist);
+      this.hero.y += (dy / dist) * Math.min(speed, dist);
+
+      // Record trail for dragon followers!
+      if (Math.random() > 0.45) {
+        this.hero.trail.unshift({ x: this.hero.x, y: this.hero.y });
+        if (this.hero.trail.length > 60) this.hero.trail.pop();
+      }
+      if (Math.random() > 0.82) sfx.step();
+    } else {
+      this.hero.x = this.hero.targetX;
+      this.hero.y = this.hero.targetY;
+      this.checkObjectiveReached();
     }
   }
 
-  moveHero(dx, dy) {
-    const nx = Math.max(0, Math.min(this.gridCols - 1, this.heroPos.x + dx));
-    const ny = Math.max(0, Math.min(this.gridRows - 1, this.heroPos.y + dy));
-    this.heroPos = { x: nx, y: ny };
-    this.checkWorldCollision();
-  }
+  checkObjectiveReached() {
+    if (!this.currentTarget) return;
+    if (!document.getElementById('spellForgeOverlay').classList.contains('hidden')) return;
+    if (!document.getElementById('chestOverlay').classList.contains('hidden')) return;
 
-  handleCanvasClick(e) {
-    const rect = this.canvas.getBoundingClientRect();
-    const scaleX = this.canvas.width / rect.width;
-    const scaleY = this.canvas.height / rect.height;
-    const cx = (e.clientX - rect.left) * scaleX;
-    const cy = (e.clientY - rect.top) * scaleY;
-    const tileW = this.canvas.width / this.gridCols;
-    const tileH = this.canvas.height / this.gridRows;
-    const gx = Math.floor(cx / tileW);
-    const gy = Math.floor(cy / tileH);
-
-    const dx = Math.sign(gx - this.heroPos.x);
-    const dy = Math.sign(gy - this.heroPos.y);
-    if (dx !== 0 || dy !== 0) {
-      this.heroPos.x = gx;
-      this.heroPos.y = gy;
-      this.checkWorldCollision();
+    const d = Math.hypot(this.hero.x - this.currentTarget.x, this.hero.y - this.currentTarget.y);
+    if (d < 0.35) {
+      if (this.state.stageOnIsland === 0) {
+        // Stage 0: Mine the Glowing STEM Crystal!
+        this.openSpellForge('CRYSTAL');
+      } else if (this.state.stageOnIsland === 1) {
+        // Stage 1: Wild Guardian Dragon Battle!
+        this.startDragonBattle(false);
+      } else if (this.state.stageOnIsland === 2) {
+        // Stage 2: Island Boss Battle!
+        this.startDragonBattle(true);
+      }
     }
   }
 
-  checkWorldCollision() {
-    const idx = this.worldEntities.findIndex(ent => ent.x === this.heroPos.x && ent.y === this.heroPos.y);
-    if (idx === -1) return;
-    const ent = this.worldEntities[idx];
+  renderWorld(time, W, H) {
+    const ctx = this.ctx;
+    const biome = BIOMES[this.state.islandIndex % BIOMES.length];
 
-    if (ent.type === 'ore') {
-      // Trigger quick STEM mining challenge!
-      this.worldEntities.splice(idx, 1);
-      this.openStemChallenge({
-        mode: 'mine',
-        oreId: ent.oreId,
-        oreLabel: ent.label
-      });
-    } else if (ent.type === 'chest') {
-      this.worldEntities.splice(idx, 1);
-      this.openStemChallenge({
-        mode: 'world_chest'
-      });
-    } else if (ent.type === 'dragon') {
-      this.worldEntities.splice(idx, 1);
-      this.spawnRandomBattle(ent.dragonId);
-      this.switchTab('battle');
-      this.showToast(`⚔️ Wild ${ent.label} appeared! Cast STEM Spells to battle or tame!`);
-    }
+    // Sky / Ocean Backdrop
+    const bgGrad = ctx.createRadialGradient(W / 2, H * 0.35, 50, W / 2, H / 2, W * 0.8);
+    bgGrad.addColorStop(0, '#1e2c5e');
+    bgGrad.addColorStop(1, biome.water);
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(0, 0, W, H);
 
-    if (this.worldEntities.length <= 2) {
-      this.generateRealmEntities();
-    }
-  }
+    // Drifting ambient embers
+    this.ambientEmbers.forEach(e => {
+      e.y += e.vy;
+      if (e.y < 0) e.y = H;
+      ctx.fillStyle = e.color;
+      ctx.beginPath();
+      ctx.arc(e.x, e.y, e.r, 0, Math.PI * 2);
+      ctx.fill();
+    });
 
-  animateWorldLoop() {
-    if (this.ctx && this.player) {
-      const w = this.canvas.width;
-      const h = this.canvas.height;
-      const tileW = w / this.gridCols;
-      const tileH = h / this.gridRows;
-      const realm = REALMS[this.currentRealm];
+    // Draw Isometric 9x9 Voxel Island Tiles (Back-to-Front painter's algorithm)
+    for (let gx = 0; gx < this.gridSize; gx++) {
+      for (let gy = 0; gy < this.gridSize; gy++) {
+        const isGolden = this.goldenPath.some(p => p.x === gx && p.y === gy);
+        const isTarget = this.currentTarget && this.currentTarget.x === gx && this.currentTarget.y === gy;
+        const wave = Math.sin(time * 0.003 + (gx + gy) * 0.5) * 0.08;
 
-      this.ctx.fillStyle = realm.bg;
-      this.ctx.fillRect(0, 0, w, h);
+        let topCol = biome.top;
+        let leftCol = biome.left;
+        let rightCol = biome.right;
 
-      // Draw Voxel Grid
-      for (let r = 0; r < this.gridRows; r++) {
-        for (let c = 0; c < this.gridCols; c++) {
-          this.ctx.strokeStyle = realm.gridColor;
-          this.ctx.lineWidth = 1.5;
-          this.ctx.strokeRect(c * tileW, r * tileH, tileW, tileH);
-          if ((r + c) % 2 === 0) {
-            this.ctx.fillStyle = 'rgba(255,255,255,0.02)';
-            this.ctx.fillRect(c * tileW, r * tileH, tileW, tileH);
-          }
+        if (isGolden) {
+          topCol = isTarget ? '#ffee32' : '#ffd166';
+          leftCol = '#d9822b';
+          rightCol = '#a35814';
+        }
+
+        this.drawIsoBlock(gx, gy, wave, 26, topCol, leftCol, rightCol, isTarget);
+
+        // Decorative Voxel Trees on border tiles
+        if (!isGolden && ((gx === 1 && gy === 1) || (gx === 7 && gy === 6) || (gx === 2 && gy === 7) || (gx === 6 && gy === 5))) {
+          this.drawIsoBlock(gx, gy, 0.7 + wave, 22, '#06d6a0', '#04966f', '#025941', false);
         }
       }
-
-      const time = performance.now() * 0.004;
-
-      // Draw Entities
-      this.worldEntities.forEach(ent => {
-        const px = ent.x * tileW + tileW / 2;
-        const py = ent.y * tileH + tileH / 2 + Math.sin(time + ent.x) * 3;
-
-        if (ent.type === 'ore') {
-          this.ctx.fillStyle = ent.color;
-          this.ctx.fillRect(px - 14, py - 14, 28, 28);
-          this.ctx.strokeStyle = '#ffffff';
-          this.ctx.lineWidth = 2;
-          this.ctx.strokeRect(px - 14, py - 14, 28, 28);
-          this.ctx.font = '14px sans-serif';
-          this.ctx.textAlign = 'center';
-          this.ctx.fillText('💎', px, py + 5);
-        } else if (ent.type === 'chest') {
-          this.ctx.fillStyle = '#ffd166';
-          this.ctx.fillRect(px - 15, py - 12, 30, 24);
-          this.ctx.strokeStyle = '#8c4f20';
-          this.ctx.lineWidth = 2.5;
-          this.ctx.strokeRect(px - 15, py - 12, 30, 24);
-          this.ctx.font = '18px sans-serif';
-          this.ctx.textAlign = 'center';
-          this.ctx.fillText('🎁', px, py + 6);
-        } else if (ent.type === 'dragon') {
-          const dObj = DRAGONS.find(d => d.id === ent.dragonId) || DRAGONS[0];
-          this.ctx.beginPath();
-          this.ctx.arc(px, py, 19, 0, Math.PI * 2);
-          this.ctx.fillStyle = dObj.primary;
-          this.ctx.fill();
-          this.ctx.lineWidth = 2.5;
-          this.ctx.strokeStyle = dObj.secondary;
-          this.ctx.stroke();
-          this.ctx.font = '20px sans-serif';
-          this.ctx.textAlign = 'center';
-          this.ctx.fillText('🐉', px, py + 7);
-        }
-      });
-
-      // Draw Player Hero + Companion Dragon
-      const hx = this.heroPos.x * tileW + tileW / 2;
-      const hy = this.heroPos.y * tileH + tileH / 2;
-
-      this.ctx.beginPath();
-      this.ctx.arc(hx, hy, 21, 0, Math.PI * 2);
-      this.ctx.fillStyle = '#ffd166';
-      this.ctx.fill();
-      this.ctx.lineWidth = 3;
-      this.ctx.strokeStyle = '#06d6a0';
-      this.ctx.stroke();
-      this.ctx.font = '22px sans-serif';
-      this.ctx.textAlign = 'center';
-      this.ctx.fillText('🧙', hx, hy + 8);
     }
-    requestAnimationFrame(() => this.animateWorldLoop());
+
+    // Draw Current Curated Objective Marker + Pulsing Golden Arrow!
+    if (this.currentTarget) {
+      const tp = this.isoToScreen(this.currentTarget.x, this.currentTarget.y, 0.5);
+      const bounce = Math.sin(time * 0.008) * 10;
+
+      if (this.state.stageOnIsland === 0) {
+        // Giant Glowing Redstone/Emerald Crystal Spire
+        ctx.save();
+        ctx.translate(tp.x, tp.y - 24 + bounce * 0.4);
+        ctx.fillStyle = '#ef476f';
+        ctx.strokeStyle = '#ffd166';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(0, -45);
+        ctx.lineTo(24, -10);
+        ctx.lineTo(0, 18);
+        ctx.lineTo(-24, -10);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+      } else {
+        // Wild Dragon or Boss Dragon waiting on the island!
+        const bossDragon = DRAGONS.find(d => d.id === biome.bossId) || DRAGONS[1];
+        this.drawDragonSprite(tp.x, tp.y - 10, bossDragon, time, this.state.stageOnIsland === 2 ? 1.15 : 0.9, true);
+      }
+
+      // Giant Bouncing Golden "CLICK HERE!" Arrow above the active target
+      ctx.save();
+      ctx.translate(tp.x, tp.y - 95 + bounce);
+      ctx.fillStyle = '#ffd166';
+      ctx.strokeStyle = '#2b1400';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(-16, -24);
+      ctx.lineTo(16, -24);
+      ctx.lineTo(16, -4);
+      ctx.lineTo(28, -4);
+      ctx.lineTo(0, 22);
+      ctx.lineTo(-28, -4);
+      ctx.lineTo(-16, -4);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // Draw Flying Dragon Followers behind the Hero!
+    this.state.dragons.forEach((dId, idx) => {
+      const dObj = DRAGONS.find(d => d.id === dId) || DRAGONS[0];
+      const trailStep = Math.min(this.hero.trail.length - 1, (idx + 1) * 8);
+      const pos = this.hero.trail[trailStep] || { x: this.hero.x - 0.7 * (idx + 1), y: this.hero.y };
+      const sp = this.isoToScreen(pos.x, pos.y, 0.65);
+      this.drawDragonSprite(sp.x - 18, sp.y, dObj, time + idx * 400, 0.72, false);
+    });
+
+    // Draw Player Wizard Hero
+    const hp = this.isoToScreen(this.hero.x, this.hero.y, 0.4);
+    this.drawWizardSprite(hp.x, hp.y, time, 1.05);
   }
 
-  // --- PRODIGY BATTLE ENGINE ---
-  spawnRandomBattle(forceDragonId = null) {
-    const realm = REALMS[this.currentRealm];
-    const pool = realm.dragonPool;
-    const chosenId = forceDragonId || pool[randInt(0, pool.length - 1)];
-    const enemyTemplate = DRAGONS.find(d => d.id === chosenId) || DRAGONS[0];
-    const levelScale = 1 + (this.player.level - 1) * 0.18;
-
-    const maxEnemyHp = Math.round(enemyTemplate.baseHp * levelScale);
-    const maxHeroHp = 120 + (this.player.level - 1) * 20 + (this.player.relics.includes('shield_obsidian') ? 25 : 0);
+  // ==========================================================================
+  // CINEMATIC PRODIGY DRAGON BATTLE ARENA
+  // ==========================================================================
+  startDragonBattle(isBoss) {
+    this.mode = 'BATTLE';
+    const biome = BIOMES[this.state.islandIndex % BIOMES.length];
+    const enemyDragon = isBoss
+      ? DRAGONS.find(d => d.id === biome.bossId) || DRAGONS[2]
+      : DRAGONS[(this.state.islandIndex + 1) % DRAGONS.length];
 
     this.battle = {
-      active: true,
-      enemy: enemyTemplate,
-      enemyHp: maxEnemyHp,
-      enemyMaxHp: maxEnemyHp,
-      heroHp: maxHeroHp,
-      heroMaxHp: maxHeroHp,
-      pendingSpell: null,
-      currentQuestion: null,
-      usedHint: false
+      enemy: enemyDragon,
+      enemyHp: isBoss ? 120 : 80,
+      enemyMaxHp: isBoss ? 120 : 80,
+      heroHp: 100,
+      heroMaxHp: 100,
+      laserAnim: 0,
+      tameAnim: 0,
+      isBoss
     };
 
-    this.updateBattleUI();
+    sfx.spellCharge();
+    document.getElementById('battleDock').classList.remove('hidden');
+    this.updateHUD();
   }
 
-  updateBattleUI() {
-    if (!this.battle.enemy || !this.player) return;
-    const companion = DRAGONS.find(d => d.id === this.player.activeDragon) || DRAGONS[0];
-    const compLv = (this.player.dragonLevels && this.player.dragonLevels[companion.id]) || 1;
+  renderBattle(time, W, H) {
+    const ctx = this.ctx;
 
-    document.getElementById('heroBattleName').textContent = `${this.player.username} & ${companion.name.split(' ')[0]} (Lv.${compLv})`;
-    document.getElementById('heroHpText').textContent = `${this.battle.heroHp} / ${this.battle.heroMaxHp} HP`;
-    document.getElementById('heroHpBar').style.width = `${Math.max(0, (this.battle.heroHp / this.battle.heroMaxHp) * 100)}%`;
+    // Dramatic Arcane Arena Sky
+    const grad = ctx.createRadialGradient(W / 2, H * 0.4, 40, W / 2, H / 2, W * 0.75);
+    grad.addColorStop(0, '#3c096c');
+    grad.addColorStop(1, '#090c1c');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
 
-    document.getElementById('enemyBattleName').textContent = `Wild ${this.battle.enemy.name}`;
-    document.getElementById('enemyHpText').textContent = `${this.battle.enemyHp} / ${this.battle.enemyMaxHp} HP`;
-    document.getElementById('enemyHpBar').style.width = `${Math.max(0, (this.battle.enemyHp / this.battle.enemyMaxHp) * 100)}%`;
+    const leftX = W * 0.27;
+    const rightX = W * 0.73;
+    const platY = H * 0.62;
 
-    document.getElementById('heroFighterArt').innerHTML = renderDragonSVG(companion, 195, false);
-    document.getElementById('enemyFighterArt').innerHTML = renderDragonSVG(this.battle.enemy, 195, true);
-  }
+    // Left Hero Floating Voxel Platform
+    ctx.fillStyle = '#1b9aaa';
+    ctx.strokeStyle = '#06d6a0';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.ellipse(leftX, platY + 25, 135, 38, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
 
-  initiateSpell(spellType) {
-    this.openStemChallenge({
-      mode: 'battle',
-      spellType
-    });
-  }
+    // Right Enemy Floating Voxel Platform
+    ctx.fillStyle = '#781d09';
+    ctx.strokeStyle = '#ef476f';
+    ctx.beginPath();
+    ctx.ellipse(rightX, platY + 25, 135, 38, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
 
-  openStemChallenge(context) {
-    this.challengeContext = context;
-    const q = generateSTEMQuestion(this.player.settings.topic, this.player.settings.grade);
-    this.battle.currentQuestion = q;
-    this.battle.usedHint = false;
+    // Draw Hero + Lead Companion Dragon on Left Platform
+    const leadId = this.state.dragons[this.state.activeDragonIdx % this.state.dragons.length] || 'ignis';
+    const leadDragon = DRAGONS.find(d => d.id === leadId) || DRAGONS[0];
+    this.drawWizardSprite(leftX - 55, platY + 8, time, 1.35);
+    this.drawDragonSprite(leftX + 35, platY - 12, leadDragon, time, 1.35, false);
 
-    document.getElementById('stemCategoryBadge').textContent = q.category;
-    document.getElementById('stemStreakBadge').textContent = `🔥 Streak: ${this.player.streak}x`;
-    document.getElementById('stemPromptText').textContent = q.prompt;
-    document.getElementById('stemVisualBox').textContent = q.visual;
-    document.getElementById('stemHintBox').classList.add('hidden');
-    document.getElementById('stemHintBox').textContent = `💡 Wizard Hint: ${q.hint}`;
+    // Draw Wild Enemy Dragon on Right Platform
+    const enemyScale = this.battle.isBoss ? 1.65 : 1.4;
+    this.drawDragonSprite(rightX, platY - 10, this.battle.enemy, time, enemyScale, true);
 
-    // If player owns Ender Logic Goggles relic, show hint automatically!
-    if (this.player.relics.includes('visor_quantum')) {
-      document.getElementById('stemHintBox').classList.remove('hidden');
+    // Draw Floating Overhead Health Bars
+    this.drawOverheadHealthBar(ctx, leftX, platY - 155, `${this.state.name} & ${leadDragon.name.split(' ')[0]}`, this.battle.heroHp, this.battle.heroMaxHp, '#06d6a0');
+    this.drawOverheadHealthBar(ctx, rightX, platY - 155, `${this.battle.isBoss ? '👑 BOSS: ' : ''}${this.battle.enemy.name}`, this.battle.enemyHp, this.battle.enemyMaxHp, '#ef476f');
+
+    // Animated Dragon Fire / Laser Beam during Spell Attack!
+    if (this.battle.laserAnim > 0) {
+      this.battle.laserAnim--;
+      ctx.save();
+      ctx.strokeStyle = leadDragon.wing;
+      ctx.lineWidth = 26;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(leftX + 65, platY - 45);
+      ctx.lineTo(rightX - 20, platY - 45);
+      ctx.stroke();
+
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 10;
+      ctx.stroke();
+      ctx.restore();
     }
+  }
 
-    const grid = document.getElementById('stemAnswersGrid');
-    grid.innerHTML = q.options.map(opt => `<button class="answer-btn" data-ans="${opt}">${opt}</button>`).join('');
+  drawOverheadHealthBar(ctx, x, y, title, hp, maxHp, color) {
+    const w = 230;
+    const h = 22;
+    ctx.save();
+    ctx.fillStyle = 'rgba(9, 13, 28, 0.88)';
+    ctx.strokeStyle = '#ffd166';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.roundRect(x - w / 2, y - 30, w, 58, 14);
+    ctx.fill();
+    ctx.stroke();
 
-    grid.querySelectorAll('.answer-btn').forEach(btn => {
-      btn.addEventListener('click', () => this.evaluateStemAnswer(btn, btn.dataset.ans));
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 15px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(title, x, y - 9);
+
+    ctx.fillStyle = '#090d1a';
+    ctx.fillRect(x - w / 2 + 14, y, w - 28, h);
+
+    const ratio = Math.max(0, hp / maxHp);
+    ctx.fillStyle = color;
+    ctx.fillRect(x - w / 2 + 14, y, (w - 28) * ratio, h);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 13px sans-serif';
+    ctx.fillText(`${hp} / ${maxHp} HP`, x, y + 16);
+    ctx.restore();
+  }
+
+  // ==========================================================================
+  // INTERACTIVE VISUAL STEM SPELL-FORGE
+  // ==========================================================================
+  openSpellForge(actionType) {
+    this.pendingAction = actionType;
+    const challenge = createVisualSTEMChallenge(this.state.level);
+    this.activeChallenge = challenge;
+
+    document.getElementById('forgeTopicBadge').textContent = challenge.topic;
+    document.getElementById('forgeStreakText').textContent = `🔥 Combo: ${this.state.streak}x`;
+    document.getElementById('forgeQuestionPrompt').textContent = challenge.prompt;
+
+    const tipEl = document.getElementById('forgeHelperTip');
+    tipEl.classList.add('hidden');
+    tipEl.textContent = `💡 Visual Hint: ${challenge.hint}`;
+
+    // Draw the visual diagram on #stemDiagramCanvas!
+    const diagCanvas = document.getElementById('stemDiagramCanvas');
+    const diagCtx = diagCanvas.getContext('2d');
+    challenge.drawDiagram(diagCtx);
+
+    // Render 3 Giant Tactile Rune Stone Buttons
+    const row = document.getElementById('runeChoicesRow');
+    row.innerHTML = challenge.choices
+      .map(c => `<button class="rune-stone-btn" data-val="${c}">🔮 ${c}</button>`)
+      .join('');
+
+    row.querySelectorAll('.rune-stone-btn').forEach(btn => {
+      btn.addEventListener('click', () => this.handleRuneChoice(btn, btn.dataset.val));
     });
 
-    document.getElementById('stemModal').classList.remove('hidden');
+    document.getElementById('spellForgeOverlay').classList.remove('hidden');
   }
 
-  showQuestionHint() {
-    document.getElementById('stemHintBox').classList.remove('hidden');
-    this.battle.usedHint = true;
-  }
+  handleRuneChoice(btn, val) {
+    const ch = this.activeChallenge;
+    if (!ch) return;
 
-  evaluateStemAnswer(btnEl, chosenAns) {
-    const q = this.battle.currentQuestion;
-    if (!q) return;
-
-    const allBtns = document.querySelectorAll('#stemAnswersGrid .answer-btn');
-    allBtns.forEach(b => (b.disabled = true));
-
-    this.player.stats.totalAttempts++;
-    const isCorrect = String(chosenAns) === String(q.correct);
-
-    if (isCorrect) {
-      btnEl.classList.add('correct');
-      sfx.spellSuccess();
-      this.player.streak++;
-      this.player.stats.correctAnswers++;
-      if (this.player.streak > this.player.stats.bestStreak) {
-        this.player.stats.bestStreak = this.player.streak;
-      }
+    if (String(val) === String(ch.correct)) {
+      btn.classList.add('correct');
+      sfx.spellCharge();
+      this.state.streak++;
 
       setTimeout(() => {
-        document.getElementById('stemModal').classList.add('hidden');
-        this.resolveChallengeSuccess();
-      }, 650);
+        document.getElementById('spellForgeOverlay').classList.add('hidden');
+        this.executeSuccessfulSpell();
+      }, 480);
     } else {
-      btnEl.classList.add('wrong');
-      allBtns.forEach(b => {
-        if (String(b.dataset.ans) === String(q.correct)) b.classList.add('correct');
-      });
-      sfx.spellMiss();
-      this.player.streak = 0;
-
-      setTimeout(() => {
-        document.getElementById('stemModal').classList.add('hidden');
-        this.resolveChallengeFailure(q.correct);
-      }, 1250);
+      // Zero-shame instant visual scaffold! Keep modal open so they see the visual hint & succeed!
+      btn.classList.add('wrong');
+      sfx.wrongTry();
+      document.getElementById('forgeHelperTip').classList.remove('hidden');
     }
   }
 
-  resolveChallengeSuccess() {
-    const ctx = this.challengeContext;
-    const streakBonus = Math.min(3, 1 + this.player.streak * 0.15);
-    const crownBonus = this.player.relics.includes('crown_prime') ? 1.2 : 1;
-    const earnedPoints = Math.round(35 * streakBonus * crownBonus);
-    const earnedXp = Math.round(30 + (this.player.craftedBuilds.includes('observatory') ? 15 : 0));
+  executeSuccessfulSpell() {
+    const W = this.canvas.width;
+    const H = this.canvas.height;
 
-    this.player.points += earnedPoints;
+    // Award coins & XP
+    const earnedCoins = 25 * this.state.streak;
+    this.state.coins += earnedCoins;
+    this.gainXP(40);
 
-    if (ctx.mode === 'mine') {
-      const qty = this.player.relics.includes('pickaxe_diamond') ? 3 : 2;
-      this.player.ores[ctx.oreId] = (this.player.ores[ctx.oreId] || 0) + qty;
-      this.player.stats.blocksMined++;
-      sfx.mineBlock();
-      this.showToast(`⛏️ Mined +${qty} ${ctx.oreLabel} & +${earnedPoints} Game Points!`);
-      this.grantXP(earnedXp);
-      this.checkAchievements();
-      this.updateAllUI();
+    if (this.pendingAction === 'CRYSTAL') {
+      // Shatter crystal on Island Stage 0!
+      sfx.laserBlast();
+      this.triggerScreenShake(12, 14);
+      const tp = this.isoToScreen(this.currentTarget.x, this.currentTarget.y, 0.5);
+      this.spawnBurst(tp.x, tp.y, '#06d6a0', 32);
+      this.spawnFloatText(tp.x, tp.y - 40, `+${earnedCoins} GOLD & MANA!`, '#ffd166');
+
+      this.state.stageOnIsland = 1;
+      this.setupIslandEncounters();
+      this.save();
       return;
     }
 
-    if (ctx.mode === 'world_chest') {
-      this.player.chestsOwned.oak = (this.player.chestsOwned.oak || 0) + 1;
-      this.grantXP(earnedXp);
-      this.triggerSurpriseModal('🗺️ World Mystery Chest Unlocked!', 'oak', 'You solved the Ancient Voxel Lock on the map!');
-      this.checkAchievements();
-      this.updateAllUI();
-      return;
-    }
+    // In Battle!
+    const rightX = W * 0.73;
+    const platY = H * 0.62;
 
-    // Battle mode resolution
-    const companion = DRAGONS.find(d => d.id === this.player.activeDragon) || DRAGONS[0];
-    const compLv = (this.player.dragonLevels && this.player.dragonLevels[companion.id]) || 1;
-    const beaconMult = this.player.craftedBuilds.includes('beacon_math') ? 1.15 : 1;
-    const wandBonus = this.player.relics.includes('wand_redstone') ? 10 : 0;
-
-    let baseDmg = Math.round((companion.power + compLv * 6 + wandBonus) * streakBonus * beaconMult);
-
-    if (ctx.spellType === 'fireball') {
-      this.battle.enemyHp = Math.max(0, this.battle.enemyHp - baseDmg);
-      document.getElementById('battleLogText').textContent = `🔥 Direct Hit! Your STEM Spell dealt ${baseDmg} damage (+${earnedPoints} pts)!`;
-    } else if (ctx.spellType === 'lightning') {
-      const critDmg = Math.round(baseDmg * 1.25);
-      this.battle.enemyHp = Math.max(0, this.battle.enemyHp - critDmg);
-      document.getElementById('battleLogText').textContent = `⚡ Redstone Surge! Critical ${critDmg} damage (+${earnedPoints} pts)!`;
-    } else if (ctx.spellType === 'heal') {
-      const healAmt = Math.round(this.battle.heroMaxHp * 0.42);
-      this.battle.heroHp = Math.min(this.battle.heroMaxHp, this.battle.heroHp + healAmt);
-      const chipDmg = Math.round(baseDmg * 0.6);
-      this.battle.enemyHp = Math.max(0, this.battle.enemyHp - chipDmg);
-      document.getElementById('battleLogText').textContent = `💚 Restored +${healAmt} HP and splashed ${chipDmg} arcane damage!`;
-    } else if (ctx.spellType === 'tame') {
+    if (this.pendingAction === 'TAME') {
+      // Tame the wild dragon if not already owned!
       const enemyId = this.battle.enemy.id;
-      const alreadyOwned = this.player.dragons.includes(enemyId);
-      const hpRatio = this.battle.enemyHp / this.battle.enemyMaxHp;
-      if (!alreadyOwned && (hpRatio <= 0.65 || this.player.relics.includes('orb_galaxy'))) {
-        this.player.dragons.push(enemyId);
-        this.player.dragonLevels[enemyId] = 1;
-        this.player.chestsOwned.gilded = (this.player.chestsOwned.gilded || 0) + 1;
-        this.grantXP(earnedXp + 25);
-        this.triggerSurpriseModal(`🐉 NEW DRAGON TAMED: ${this.battle.enemy.name}!`, 'gilded', `You bonded with ${this.battle.enemy.name} using STEM mastery!`);
-        this.spawnRandomBattle();
-        this.checkAchievements();
-        this.updateAllUI();
-        return;
-      } else {
-        this.battle.enemyHp = Math.max(0, this.battle.enemyHp - baseDmg);
-        document.getElementById('battleLogText').textContent = alreadyOwned
-          ? `✨ You already tamed ${this.battle.enemy.name}! Spell dealt ${baseDmg} bonus damage!`
-          : `🔮 Dragon Crystal weakened ${this.battle.enemy.name} by ${baseDmg} HP! Try taming again when its HP is lower!`;
+      if (!this.state.dragons.includes(enemyId)) {
+        this.state.dragons.push(enemyId);
       }
+      sfx.chestExplode();
+      this.spawnBurst(rightX, platY - 30, '#00f5d4', 45);
+      this.spawnFloatText(rightX, platY - 90, `🐉 TAMED ${this.battle.enemy.name.toUpperCase()}!`, '#00f5d4');
+      this.battle.enemyHp = 0;
+    } else {
+      // Fire Dragon Laser Attack!
+      sfx.laserBlast();
+      this.battle.laserAnim = 22;
+      this.triggerScreenShake(16, 18);
+      const dmg = 60 + (this.state.gear.includes('staff_nether') ? 35 : 0);
+      this.battle.enemyHp = Math.max(0, this.battle.enemyHp - dmg);
+      this.spawnBurst(rightX, platY - 30, '#ffd166', 38);
+      this.spawnFloatText(rightX, platY - 80, `💥 -${dmg} SUPER SPELL!`, '#ffd166');
     }
 
-    // Check if wild dragon defeated
     if (this.battle.enemyHp <= 0) {
-      this.player.stats.dragonsDefeated++;
-      this.player.points += 80;
-      this.player.ores.emerald += 2;
-      this.player.ores.diamond += 1;
-      this.player.chestsOwned.oak = (this.player.chestsOwned.oak || 0) + 1;
-      this.showToast(`🏆 Victory! Defeated ${this.battle.enemy.name} (+80 Bonus Points + 1 Chest)!`);
-      this.grantXP(earnedXp + 35);
-      this.spawnRandomBattle();
+      setTimeout(() => this.finishBattleVictory(), 950);
     } else {
-      // Enemy counter-attack
-      const enemyHit = randInt(10, 18 + this.currentRealm * 4);
-      this.battle.heroHp = Math.max(10, this.battle.heroHp - enemyHit);
-      this.grantXP(earnedXp);
+      // Enemy gentle counter-attack
+      setTimeout(() => {
+        this.battle.heroHp = Math.max(25, this.battle.heroHp - 18);
+        this.triggerScreenShake(8, 10);
+      }, 550);
     }
 
-    this.checkAchievements();
-    this.updateBattleUI();
-    this.updateAllUI();
+    this.save();
+    this.updateHUD();
   }
 
-  resolveChallengeFailure(correctAnswer) {
-    this.showToast(`💡 Good try! The correct answer was ${correctAnswer}. Keep going!`);
-    if (this.challengeContext && this.challengeContext.mode === 'battle') {
-      const enemyHit = randInt(8, 14);
-      this.battle.heroHp = Math.max(15, this.battle.heroHp - enemyHit);
-      document.getElementById('battleLogText').textContent = `🛡️ Spell fizzled! Correct answer was ${correctAnswer}. Dragon grazed you for ${enemyHit} HP.`;
-      this.updateBattleUI();
-    }
-    this.updateAllUI();
-  }
+  finishBattleVictory() {
+    document.getElementById('battleDock').classList.add('hidden');
+    this.mode = 'WORLD';
 
-  grantXP(amount) {
-    this.player.xp += amount;
-    let leveledUp = false;
-    while (this.player.xp >= this.player.xpToNext) {
-      this.player.xp -= this.player.xpToNext;
-      this.player.level++;
-      this.player.xpToNext = Math.round(this.player.xpToNext * 1.25);
-      leveledUp = true;
-    }
-
-    if (leveledUp) {
-      sfx.levelUp();
-      const chestReward = this.player.level >= 5 ? 'arcane' : 'gilded';
-      this.player.chestsOwned[chestReward] = (this.player.chestsOwned[chestReward] || 0) + 1;
-      this.player.points += 150;
-      this.triggerSurpriseModal(
-        `🎉 LEVEL UP! YOU REACHED LEVEL ${this.player.level}!`,
-        chestReward,
-        `Every new level unlocks a special Level-Up Surprise Chest + 150 Bonus Points!`
-      );
-    }
-    this.saveProfiles();
-  }
-
-  checkAchievements() {
-    for (const ach of ACHIEVEMENTS) {
-      if (!this.player.achievements.includes(ach.id) && ach.check(this.player)) {
-        this.player.achievements.push(ach.id);
-        this.player.chestsOwned[ach.chestReward] = (this.player.chestsOwned[ach.chestReward] || 0) + 1;
-        this.player.points += 100;
-        this.saveProfiles();
-        this.triggerSurpriseModal(
-          `🏆 ACHIEVEMENT UNLOCKED: ${ach.title}!`,
-          ach.chestReward,
-          `${ach.desc} — Here is your Achievement Surprise Reward!`
-        );
-        break; // Show one celebration at a time
-      }
-    }
-  }
-
-  // --- SURPRISE CHEST UNBOXING ENGINE ---
-  triggerSurpriseModal(headline, chestId, subtitle) {
-    sfx.chestOpen();
-    const chest = CHEST_TYPES.find(c => c.id === chestId) || CHEST_TYPES[0];
-    this.player.stats.chestsOpened++;
-
-    // Roll rewards: Relic or Dragon or Bonus Gems + STEM Fact
-    let rewardTitle = '';
-    let rewardDesc = '';
-    let stemFact = '';
-
-    const unownedRelics = SURPRISE_ITEMS.filter(r => !this.player.relics.includes(r.id));
-    const unownedDragons = DRAGONS.filter(d => !this.player.dragons.includes(d.id));
-
-    if ((chestId === 'mythic' || chestId === 'arcane') && unownedDragons.length > 0 && Math.random() > 0.35) {
-      const newDragon = unownedDragons[randInt(0, unownedDragons.length - 1)];
-      this.player.dragons.push(newDragon.id);
-      this.player.dragonLevels[newDragon.id] = 1;
-      rewardTitle = `🐉 HATCHED NEW DRAGON: ${newDragon.name}!`;
-      rewardDesc = `Element: ${newDragon.element} • Base Power: ${newDragon.power}`;
-      stemFact = newDragon.lore;
-    } else if (unownedRelics.length > 0) {
-      const relic = unownedRelics[randInt(0, unownedRelics.length - 1)];
-      this.player.relics.push(relic.id);
-      rewardTitle = `${relic.icon} ${relic.name}`;
-      rewardDesc = `Permanent Passive Boost: ${relic.bonus}`;
-      stemFact = relic.fact;
+    if (this.state.stageOnIsland === 1) {
+      this.state.stageOnIsland = 2;
+      this.setupIslandEncounters();
+      this.openInteractiveChest('🎁 GUARDIAN VICTORY CHEST!', 'You defeated the Bridge Guardian!');
     } else {
-      const bonusPts = chestId === 'mythic' ? 400 : chestId === 'arcane' ? 250 : 140;
-      this.player.points += bonusPts;
-      this.player.ores.diamond += 2;
-      this.player.ores.emerald += 3;
-      const randomFactItem = SURPRISE_ITEMS[randInt(0, SURPRISE_ITEMS.length - 1)];
-      rewardTitle = `💎 Jackpot Gem Cache (+${bonusPts} Game Points!)`;
-      rewardDesc = `Plus +2 Diamonds and +3 Emeralds added to your Voxel Inventory!`;
-      stemFact = randomFactItem.fact;
+      // Completed the whole Island Boss! Advance to next Island & drop Boss Chest!
+      this.state.islandIndex++;
+      this.state.stageOnIsland = 0;
+      this.hero.x = 1;
+      this.hero.y = 4;
+      this.hero.targetX = 1;
+      this.hero.targetY = 4;
+      this.setupIslandEncounters();
+      this.openInteractiveChest('👑 ISLAND BOSS MYSTERY CHEST!', `You conquered the Island and reached a new realm!`);
     }
-
-    document.getElementById('surpriseHeadline').textContent = headline;
-    document.getElementById('surpriseSubtitle').textContent = subtitle;
-    document.getElementById('surpriseChestArt').innerHTML = renderChestSVG(chest, true);
-    document.getElementById('surpriseRewardTitle').textContent = rewardTitle;
-    document.getElementById('surpriseRewardDesc').textContent = rewardDesc;
-    document.getElementById('surpriseStemFact').textContent = stemFact;
-
-    document.getElementById('surpriseModal').classList.remove('hidden');
-    this.saveProfiles();
-    this.updateAllUI();
+    this.save();
   }
 
-  openChestFromVault(chestId, usePoints = false) {
-    const chest = CHEST_TYPES.find(c => c.id === chestId);
-    if (!chest) return;
-
-    const ownedCount = (this.player.chestsOwned && this.player.chestsOwned[chestId]) || 0;
-    if (!usePoints && ownedCount > 0) {
-      this.player.chestsOwned[chestId]--;
-      this.triggerSurpriseModal(`🎁 Unboxed ${chest.name}!`, chestId, 'Opened from your Treasure Vault!');
-    } else if (usePoints) {
-      if (this.player.points < chest.costPoints) {
-        this.showToast(`⚠️ Need ${chest.costPoints} Game Points! Solve more STEM spells to earn points!`);
-        return;
-      }
-      this.player.points -= chest.costPoints;
-      this.triggerSurpriseModal(`✨ Purchased & Unboxed ${chest.name}!`, chestId, `Redeemed with ${chest.costPoints} hard-earned STEM Game Points!`);
+  gainXP(amount) {
+    this.state.xp += amount;
+    while (this.state.xp >= this.state.xpNext) {
+      this.state.xp -= this.state.xpNext;
+      this.state.level++;
+      this.state.xpNext = Math.round(this.state.xpNext * 1.25);
     }
   }
 
-  // --- UI RENDERING ---
-  updateAllUI() {
-    if (!this.player) return;
+  // ==========================================================================
+  // INTERACTIVE "TAP 3 TIMES TO BREAK OPEN!" 3D VOXEL CHEST
+  // ==========================================================================
+  openInteractiveChest(headline, subtext) {
+    // Pick an unowned gear surprise or dragon!
+    const unownedGear = SURPRISES.filter(g => !this.state.gear.includes(g.id));
+    const unownedDragons = DRAGONS.filter(d => !this.state.dragons.includes(d.id));
 
-    // Top HUD
-    const avatarIcons = { mage: '🧙‍♂️', knight: '⚔️', alchemist: '🧪', ranger: '🏹' };
-    document.getElementById('hudAvatarIcon').textContent = avatarIcons[this.player.heroClass] || '🧙‍♂️';
-    document.getElementById('hudLevelPill').textContent = `Lv.${this.player.level}`;
-    document.getElementById('hudHeroName').textContent = this.player.username;
-    document.getElementById('hudXpFill').style.width = `${Math.min(100, (this.player.xp / this.player.xpToNext) * 100)}%`;
-    document.getElementById('hudXpText').textContent = `${this.player.xp} / ${this.player.xpToNext} XP to Level ${this.player.level + 1}`;
+    let reward;
+    if (unownedGear.length > 0) {
+      const g = unownedGear[0];
+      this.state.gear.push(g.id);
+      reward = { icon: g.icon, name: g.name, desc: g.desc, fact: g.fact };
+    } else if (unownedDragons.length > 0) {
+      const d = unownedDragons[0];
+      this.state.dragons.push(d.id);
+      reward = {
+        icon: '🐉',
+        name: `New Dragon: ${d.name}`,
+        desc: `${d.name} now flies behind you on every island!`,
+        fact: 'STEM Secret: Flying creatures have hollow, lightweight bones to soar through the sky!'
+      };
+    } else {
+      this.state.coins += 250;
+      reward = {
+        icon: '💎',
+        name: '250 Mythic Voxel Gems!',
+        desc: 'Supercharged your Wizard Level & Dragon Power!',
+        fact: 'STEM Secret: Emeralds get their bright green color from trace amounts of chromium and vanadium!'
+      };
+    }
 
-    document.getElementById('hudPoints').textContent = this.player.points;
-    document.getElementById('hudStreak').textContent = `${this.player.streak}x`;
-    document.getElementById('hudDragonsCount').textContent = `${this.player.dragons.length}/${DRAGONS.length}`;
-    document.getElementById('hudSolvedCount').textContent = this.player.stats.correctAnswers;
+    this.chestState = { taps: 0, opened: false, shake: 0, pendingReward: reward };
 
-    const totalChestsOwned = Object.values(this.player.chestsOwned || {}).reduce((a, b) => a + b, 0);
-    const chestBadge = document.getElementById('navChestBadge');
-    chestBadge.textContent = totalChestsOwned;
-    chestBadge.style.display = totalChestsOwned > 0 ? 'inline-block' : 'none';
+    document.getElementById('chestHeadline').textContent = headline;
+    document.getElementById('chestSubtext').textContent = subtext;
+    document.getElementById('chestTapPrompt').classList.remove('hidden');
+    document.getElementById('chestTapPrompt').textContent = '👆 TAP THE CHEST 3 TIMES TO BREAK IT OPEN!';
+    document.getElementById('rewardRevealBox').classList.add('hidden');
+    document.getElementById('btnContinueFromChest').classList.add('hidden');
+    document.getElementById('chestOverlay').classList.remove('hidden');
 
-    // Realm selector buttons
-    const realmBar = document.getElementById('realmSelectorBar');
-    realmBar.innerHTML = REALMS.map(r => {
-      const unlocked = this.player.level >= r.minLevel;
-      const active = this.currentRealm === r.id ? 'active' : '';
-      return `<button class="realm-btn ${active} ${unlocked ? '' : 'locked'}" data-realm="${r.id}">
-        ${r.icon} ${r.name} ${unlocked ? '' : `(Lv.${r.minLevel})`}
-      </button>`;
-    }).join('');
-    realmBar.querySelectorAll('.realm-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const rid = Number(btn.dataset.realm);
-        const realm = REALMS[rid];
-        if (this.player.level < realm.minLevel) {
-          this.showToast(`🔒 Reach Level ${realm.minLevel} by solving STEM equations to unlock ${realm.name}!`);
-          return;
-        }
-        this.currentRealm = rid;
-        this.generateRealmEntities();
-        this.updateAllUI();
-      });
-    });
-
-    // Voxel Inventory
-    const oreColors = { emerald: '#06d6a0', redstone: '#ef476f', diamond: '#4cc9f0', gold: '#ffd166', amethyst: '#9b5de5' };
-    document.getElementById('voxelInventoryGrid').innerHTML = Object.entries(this.player.ores).map(([k, v]) => `
-      <div class="voxel-slot">
-        <span class="voxel-cube" style="background:${oreColors[k]}"></span>
-        <span>${k.charAt(0).toUpperCase() + k.slice(1)}: <strong>${v}</strong></span>
-      </div>
-    `).join('');
-
-    // Active Quests
-    document.getElementById('activeQuestsList').innerHTML = `
-      <div class="quest-item ${this.player.stats.correctAnswers >= 5 ? 'done' : ''}">
-        <strong>🔮 Spellcaster Warmup</strong>
-        <div>Solve 5 STEM equations in battle or mining</div>
-        <div class="quest-progress">${Math.min(5, this.player.stats.correctAnswers)} / 5 Completed</div>
-      </div>
-      <div class="quest-item ${this.player.stats.blocksMined >= 5 ? 'done' : ''}">
-        <strong>⛏️ Voxel Ore Collector</strong>
-        <div>Walk onto 5 glowing Ore Blocks on the World Map</div>
-        <div class="quest-progress">${Math.min(5, this.player.stats.blocksMined)} / 5 Mined</div>
-      </div>
-      <div class="quest-item ${this.player.dragons.length >= 3 ? 'done' : ''}">
-        <strong>🐉 Dragon Tamer Quest</strong>
-        <div>Tame or hatch 3 Elemental Dragons</div>
-        <div class="quest-progress">${Math.min(3, this.player.dragons.length)} / 3 Dragons</div>
-      </div>
-    `;
-
-    this.renderChestsTab();
-    this.renderDragonsTab();
-    this.renderAchievementsTab();
-    this.updateBattleUI();
+    this.drawChestCanvas();
+    this.save();
   }
 
-  renderChestsTab() {
-    const grid = document.getElementById('chestsVaultGrid');
-    grid.innerHTML = CHEST_TYPES.map(c => {
-      const count = (this.player.chestsOwned && this.player.chestsOwned[c.id]) || 0;
-      return `
-      <div class="chest-card">
-        <div>
-          <span class="rarity-tag rarity-${c.rarity}">${c.rarityLabel}</span>
-          <div class="chest-svg-wrap ${count > 0 ? 'chest-shake' : ''}">${renderChestSVG(c, false)}</div>
-          <h3>${c.name}</h3>
-          <p style="font-size:0.84rem;color:var(--text-muted);margin:8px 0 14px;">${c.desc}</p>
-        </div>
-        <div style="display:flex;flex-direction:column;gap:8px;">
-          ${count > 0
-            ? `<button class="btn-voxel btn-gold btn-open-owned" data-chest="${c.id}">🎁 Open Free Chest (${count} Owned)</button>`
-            : `<button class="btn-voxel btn-purple btn-buy-chest" data-chest="${c.id}">⭐ Unlock for ${c.costPoints} Points</button>`
-          }
-        </div>
-      </div>`;
-    }).join('');
+  handleChestTap() {
+    if (this.chestState.opened) return;
+    this.chestState.taps++;
+    const left = 3 - this.chestState.taps;
 
-    grid.querySelectorAll('.btn-open-owned').forEach(btn => {
-      btn.addEventListener('click', () => this.openChestFromVault(btn.dataset.chest, false));
-    });
-    grid.querySelectorAll('.btn-buy-chest').forEach(btn => {
-      btn.addEventListener('click', () => this.openChestFromVault(btn.dataset.chest, true));
-    });
+    if (left > 0) {
+      sfx.chestTap(this.chestState.taps);
+      document.getElementById('chestTapPrompt').textContent = `💥 CRACK! TAP ${left} MORE TIME${left > 1 ? 'S' : ''}!`;
+      this.drawChestCanvas();
+    } else {
+      // BOOM! Unbox the surprise!
+      this.chestState.opened = true;
+      sfx.chestExplode();
+      document.getElementById('chestTapPrompt').classList.add('hidden');
 
-    // Render Relics Collection
-    const relicsGrid = document.getElementById('relicsCollectionGrid');
-    relicsGrid.innerHTML = SURPRISE_ITEMS.map(item => {
-      const owned = this.player.relics.includes(item.id);
-      return `
-      <div class="ach-card" style="opacity:${owned ? '1' : '0.45'}">
-        <div style="font-size:2.2rem;margin-bottom:6px;">${item.icon}</div>
-        <h4>${item.name}</h4>
-        <p style="color:var(--accent-gold);font-size:0.82rem;font-weight:800;margin:4px 0;">${item.bonus}</p>
-        <p style="font-size:0.78rem;color:var(--text-muted);">${owned ? item.fact : '🔒 Unbox Surprise Chests to discover this relic & STEM fact!'}</p>
-      </div>`;
-    }).join('');
+      const r = this.chestState.pendingReward;
+      document.getElementById('rewardBigIcon').textContent = r.icon;
+      document.getElementById('rewardNameText').textContent = r.name;
+      document.getElementById('rewardPowerText').textContent = r.desc;
+      document.getElementById('rewardFactText').textContent = r.fact;
+
+      document.getElementById('rewardRevealBox').classList.remove('hidden');
+      document.getElementById('btnContinueFromChest').classList.remove('hidden');
+      this.drawChestCanvas();
+    }
   }
 
-  renderDragonsTab() {
-    const grid = document.getElementById('dragonsSanctuaryGrid');
-    grid.innerHTML = DRAGONS.map(d => {
-      const owned = this.player.dragons.includes(d.id);
-      const isSelected = this.player.activeDragon === d.id;
-      const lv = (this.player.dragonLevels && this.player.dragonLevels[d.id]) || 1;
-      const evolveCost = lv * 120;
+  drawChestCanvas() {
+    const c = document.getElementById('chestCanvas');
+    const ctx = c.getContext('2d');
+    ctx.clearRect(0, 0, c.width, c.height);
 
-      return `
-      <div class="dragon-card" style="opacity:${owned ? '1' : '0.52'}; border-color:${isSelected ? 'var(--accent-gold)' : '#344375'}">
-        <div>
-          <span class="rarity-tag rarity-${d.rarity.toLowerCase()}">${d.rarity} • ${d.element}</span>
-          <div style="margin:6px auto;">${renderDragonSVG(d, 155, false)}</div>
-          <h3>${d.name} ${owned ? `(Stage ${lv})` : '🔒'}</h3>
-          <p style="font-size:0.8rem;color:var(--text-muted);margin:6px 0 12px;">${d.lore}</p>
-        </div>
-        ${owned ? `
-          <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
-            <button class="btn-voxel btn-sm ${isSelected ? 'btn-gold' : ''} btn-select-dragon" data-dragon="${d.id}">
-              ${isSelected ? '⭐ Active Partner' : 'Equip Partner'}
-            </button>
-            <button class="btn-voxel btn-purple btn-sm btn-evolve-dragon" data-dragon="${d.id}">
-              🧬 Evolve (${evolveCost} pts)
-            </button>
-          </div>
-        ` : `<div style="font-size:0.8rem;color:var(--accent-gold);font-weight:800;">📍 ${d.unlockHint}</div>`}
-      </div>`;
-    }).join('');
+    const cx = c.width / 2;
+    const cy = c.height / 2 + 15;
+    const taps = this.chestState.taps;
+    const opened = this.chestState.opened;
 
-    grid.querySelectorAll('.btn-select-dragon').forEach(btn => {
-      btn.addEventListener('click', () => {
-        this.player.activeDragon = btn.dataset.dragon;
-        this.saveProfiles();
-        this.showToast(`🐉 Equipped new Dragon Partner!`);
-        this.updateAllUI();
-      });
-    });
+    // Radial light burst behind chest (grows with each tap!)
+    const radius = opened ? 115 : 55 + taps * 22;
+    const grad = ctx.createRadialGradient(cx, cy - 15, 5, cx, cy - 15, radius);
+    grad.addColorStop(0, '#ffee32');
+    grad.addColorStop(0.5, '#ff9f1c88');
+    grad.addColorStop(1, 'transparent');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(cx, cy - 15, radius, 0, Math.PI * 2);
+    ctx.fill();
 
-    grid.querySelectorAll('.btn-evolve-dragon').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const dId = btn.dataset.dragon;
-        const lv = (this.player.dragonLevels && this.player.dragonLevels[dId]) || 1;
-        const cost = lv * 120;
-        if (this.player.points < cost) {
-          this.showToast(`⚠️ Need ${cost} Game Points to evolve this dragon!`);
-          return;
-        }
-        this.player.points -= cost;
-        this.player.dragonLevels[dId] = lv + 1;
-        sfx.levelUp();
-        this.showToast(`🧬 Dragon evolved to Stage ${lv + 1}! Spell power increased!`);
-        this.checkAchievements();
-        this.saveProfiles();
-        this.updateAllUI();
-      });
-    });
+    // Chest Base Box
+    ctx.fillStyle = '#7209b7';
+    ctx.strokeStyle = '#ffd166';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.roundRect(cx - 65, cy - 20, 130, 72, 12);
+    ctx.fill();
+    ctx.stroke();
 
-    // Voxel Crafting Builds
-    const craftGrid = document.getElementById('voxelCraftingGrid');
-    craftGrid.innerHTML = CRAFT_PROJECTS.map(proj => {
-      const built = (this.player.craftedBuilds || []).includes(proj.id);
-      const reqStr = Object.entries(proj.req).map(([k, q]) => `${q} ${k} (have ${this.player.ores[k] || 0})`).join(', ');
-      return `
-      <div class="chest-card">
-        <div>
-          <div style="font-size:2.4rem;margin-bottom:6px;">${proj.icon}</div>
-          <h3>${proj.name}</h3>
-          <p style="font-size:0.83rem;color:var(--text-muted);margin:6px 0;">${proj.desc}</p>
-          <p style="font-size:0.78rem;color:var(--accent-gold);margin-bottom:12px;">Requires: ${reqStr}</p>
-        </div>
-        ${built
-          ? `<button class="btn-voxel btn-sm" disabled>✅ Monument Built</button>`
-          : `<button class="btn-voxel btn-gold btn-sm btn-craft-build" data-build="${proj.id}">🔨 Craft (+${proj.rewardPoints} pts)</button>`
-        }
-      </div>`;
-    }).join('');
+    // Glowing cracks when tapped
+    if (taps > 0 && !opened) {
+      ctx.strokeStyle = '#00f5d4';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy - 20);
+      ctx.lineTo(cx - 18, cy + 12);
+      ctx.lineTo(cx + 12, cy + 32);
+      ctx.stroke();
+    }
 
-    craftGrid.querySelectorAll('.btn-craft-build').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const proj = CRAFT_PROJECTS.find(p => p.id === btn.dataset.build);
-        if (!proj) return;
-        for (const [ore, qty] of Object.entries(proj.req)) {
-          if ((this.player.ores[ore] || 0) < qty) {
-            this.showToast(`⛏️ Need more ${ore}! Mine glowing Ore Blocks on the World Map!`);
-            return;
-          }
-        }
-        for (const [ore, qty] of Object.entries(proj.req)) {
-          this.player.ores[ore] -= qty;
-        }
-        this.player.craftedBuilds.push(proj.id);
-        this.player.points += proj.rewardPoints;
-        this.player.chestsOwned.gilded = (this.player.chestsOwned.gilded || 0) + 1;
-        this.triggerSurpriseModal(`🏰 Crafted ${proj.name}!`, 'gilded', `${proj.desc} (+${proj.rewardPoints} Game Points!)`);
-        this.checkAchievements();
-        this.saveProfiles();
-        this.updateAllUI();
-      });
-    });
+    // Chest Lid (Flies open when opened!)
+    ctx.save();
+    if (opened) {
+      ctx.translate(0, -38);
+      ctx.rotate(-0.18);
+    }
+    ctx.fillStyle = '#ef476f';
+    ctx.strokeStyle = '#ffd166';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.roundRect(cx - 70, cy - 55, 140, 38, 12);
+    ctx.fill();
+    ctx.stroke();
+
+    // Golden Lock Emblem
+    ctx.fillStyle = '#ffd166';
+    ctx.fillRect(cx - 14, cy - 30, 28, 28);
+    ctx.restore();
   }
 
-  renderAchievementsTab() {
-    const acc = this.player.stats.totalAttempts > 0
-      ? Math.round((this.player.stats.correctAnswers / this.player.stats.totalAttempts) * 100)
-      : 100;
-    document.getElementById('statAccuracy').textContent = `${acc}%`;
-    document.getElementById('statBestStreak').textContent = `${this.player.stats.bestStreak}x`;
-    document.getElementById('statChestsOpened').textContent = this.player.stats.chestsOpened;
-
-    const grid = document.getElementById('achievementsGrid');
-    grid.innerHTML = ACHIEVEMENTS.map(a => {
-      const unlocked = this.player.achievements.includes(a.id);
-      return `
-      <div class="ach-card" style="border-color:${unlocked ? 'var(--accent-gold)' : '#2e3d6b'}; opacity:${unlocked ? '1' : '0.6'}">
-        <div>
-          <div style="font-size:2.3rem;margin-bottom:6px;">${unlocked ? a.icon : '🔒'}</div>
-          <h3>${a.title}</h3>
-          <p style="font-size:0.84rem;color:var(--text-muted);margin:8px 0;">${a.desc}</p>
-        </div>
-        <div class="rarity-tag rarity-${unlocked ? 'mythic' : 'common'}">
-          ${unlocked ? '✅ Claimed + Surprise Chest' : `🎁 Reward: ${a.chestReward.toUpperCase()} Chest`}
-        </div>
-      </div>`;
-    }).join('');
+  // ==========================================================================
+  // JUICY PARTICLES, SCREEN SHAKE & FLOATING NUMBERS
+  // ==========================================================================
+  triggerScreenShake(frames, magnitude) {
+    this.shakeTime = frames;
+    this.shakeMag = magnitude;
   }
 
-  showToast(msg) {
-    const toast = document.getElementById('toastBanner');
-    toast.textContent = msg;
-    toast.classList.remove('hidden');
-    clearTimeout(this.toastTimer);
-    this.toastTimer = setTimeout(() => toast.classList.add('hidden'), 3400);
+  spawnBurst(x, y, color, count = 25) {
+    for (let i = 0; i < count; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 2 + Math.random() * 7;
+      this.particles.push({
+        x,
+        y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - 2,
+        size: 5 + Math.random() * 7,
+        color: i % 2 === 0 ? color : '#ffd166',
+        life: 35 + Math.random() * 20
+      });
+    }
+  }
+
+  spawnFloatText(x, y, text, color) {
+    this.floatTexts.push({ x, y, text, color, life: 55 });
+  }
+
+  updateAndDrawParticles(ctx) {
+    for (let i = this.particles.length - 1; i >= 0; i--) {
+      const p = this.particles[i];
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vy += 0.22; // Gravity
+      p.life--;
+      ctx.fillStyle = p.color;
+      ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
+      if (p.life <= 0) this.particles.splice(i, 1);
+    }
+
+    for (let i = this.floatTexts.length - 1; i >= 0; i--) {
+      const ft = this.floatTexts[i];
+      ft.y -= 1.2;
+      ft.life--;
+      ctx.save();
+      ctx.font = '900 24px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.strokeStyle = '#090d1a';
+      ctx.lineWidth = 5;
+      ctx.strokeText(ft.text, ft.x, ft.y);
+      ctx.fillStyle = ft.color;
+      ctx.fillText(ft.text, ft.x, ft.y);
+      ctx.restore();
+      if (ft.life <= 0) this.floatTexts.splice(i, 1);
+    }
   }
 }
 
 window.addEventListener('DOMContentLoaded', () => {
-  window.dragonGame = new DragonCraftGame();
+  window.game = new DragonCraftWorld();
 });
