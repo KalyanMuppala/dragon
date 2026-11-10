@@ -7,7 +7,7 @@ const { execSync, spawn } = require('child_process');
 const fs = require('fs'), os = require('os'), path = require('path');
 const ROOT = path.join(__dirname, '..');
 const CHROME = process.env.CHROME || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
-const FILES = ['index.html', 'questions.js', 'voxel.js', 'game.js', 'parent.js', 'styles.css', 'manifest.json', 'icon-180.png', 'icon-512.png', 'sw.js'];
+const FILES = ['index.html', 'questions.js', 'voxel.js', 'game.js', 'duel.js', 'parent.js', 'styles.css', 'manifest.json', 'icon-180.png', 'icon-512.png', 'sw.js'];
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const results = [];
 const check = (name, ok, detail = '') => { results.push(ok); console.log((ok ? 'PASS ' : 'FAIL ') + name + (ok ? '' : ' -> ' + detail)); };

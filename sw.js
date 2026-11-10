@@ -2,8 +2,8 @@
 // Strategy: NETWORK-FIRST (always revalidates, so updates show up immediately and
 // the old "stuck on the previous version" problem cannot come back); if the network
 // is unavailable it falls back to the last copy it saved.
-const CACHE = 'dragoncraft-offline-v4';
-const CORE = ['./', 'index.html', 'questions.js', 'voxel.js', 'game.js', 'parent.js', 'styles.css', 'manifest.json', 'icon-180.png', 'icon-512.png'];
+const CACHE = 'dragoncraft-offline-v5';
+const CORE = ['./', 'index.html', 'questions.js', 'voxel.js', 'game.js', 'duel.js', 'parent.js', 'styles.css', 'manifest.json', 'icon-180.png', 'icon-512.png'];
 
 self.addEventListener('install', event => {
   event.waitUntil(

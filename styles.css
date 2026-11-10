@@ -872,3 +872,6 @@ html, body {
 .food-btn:active { transform: translateY(3px); border-bottom-width: 3px; }
 .food-btn .fi { font-size: 2.2rem; } .food-btn .fn { font-size: 0.85rem; } .food-btn .fc { color: var(--gold); font-size: 0.8rem; }
 .menu-item, .rune-stone-btn, .big-action-btn, .mini-btn { border-radius: 6px; }
+
+.duel-card { position: relative; max-width: 680px; text-align: center; max-height: 92vh; overflow-y: auto; }
+.duel-box { width: 100%; background: #0b1226; color: #cfe8ff; border: 2px solid #485b96; border-radius: 6px; padding: 8px; font-size: 0.7rem; word-break: break-all; margin: 6px 0; font-family: monospace; }

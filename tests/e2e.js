@@ -131,7 +131,7 @@ window.addEventListener('load', async () => {
     assert(!$('forgeHelperTip').classList.contains('hidden') && $('forgeHelperTip').textContent.includes('answer was'), 'answer not revealed');
     assert(g.state.stats.mistakes.length === 1 && g.state.stats.mistakes[0].picked === w.dataset.val, 'mistake not logged');
     assert(g.state.qCount === 1 && g.qWrong === 1, 'miss must be recorded once');
-    assert(seen && seen.r.lossC === 20 && seen.r.lossX === 15 && g.state.coins === seen.c - 20 && g.state.xp === 25, `penalty: ${JSON.stringify(seen)} coins ${g.state.coins} xp ${g.state.xp}`);
+    assert(seen && seen.r.lossC === 60 && seen.r.lossX === 40 && g.state.coins === seen.c - 60 && g.state.xp === 0, `penalty: ${JSON.stringify(seen)} coins ${g.state.coins} xp ${g.state.xp}`);
     assert(JSON.parse(localStorage.getItem(SAVE_KEY)).coins === g.state.coins, 'penalty must be saved immediately');
     // spamming other runes (even the right one) must not count
     const cNow = g.state.coins;
@@ -212,7 +212,7 @@ window.addEventListener('load', async () => {
     const food0 = g.state.foods[e.food] = 4;
     await feedAndAnswer(g, false);
     await sleep(800);
-    assert(b.tame === 45 && g.state.foods[e.food] === food0 - 1, 'favourite food = +45 trust and uses 1 food: tame=' + b.tame);
+    assert(b.tame === 25 && g.state.foods[e.food] === food0 - 1, 'favourite food = +25 trust and uses 1 food: tame=' + b.tame);
     assert(!g.state.dragons.includes(e.id) && g.state.dragons.length === before, 'one answer must NOT tame the dragon');
     await sleep(1200);
     assert(b.busy === false, 'dock should wake after counter-attack');
@@ -221,13 +221,13 @@ window.addEventListener('load', async () => {
     g.state.foods[meh] = 2; $('btnTameDragon').click();
     [...document.querySelectorAll('#foodRow .food-btn')].find(x => x.textContent.includes(FOODS[meh].name)).click();
     const t0 = b.tame; correctBtn(g).click(); await sleep(800);
-    assert(b.tame === t0 + 8, 'wrong food gives +8, got ' + (b.tame - t0));
+    assert(b.tame === t0 + 5, 'wrong food gives +5, got ' + (b.tame - t0));
     await sleep(1200);
     // a wrong answer while taming costs trust and points
     const c0 = g.state.coins; b.heroHp = 100;
     await feedAndAnswer(g, true);
     await sleep(2400);
-    assert(b.tame === t0 + 8 - 20 || b.tame === 0 || b.tame === Math.max(0, t0 + 8 - 20), 'trust should drop: ' + b.tame);
+    assert(b.tame === Math.max(0, t0 + 5 - 30), 'trust should drop: ' + b.tame);
     assert(g.state.coins <= c0, 'penalty');
     // finish: top the meter up and feed the favourite
     b.tame = b.tameNeed - 10; b.heroHp = 100; b.busy = false; g.updateDock();
@@ -270,6 +270,32 @@ window.addEventListener('load', async () => {
     assert(s2.pendingQ === 1, 'pendingQ survives normalize');
     g.closeForge(); g.state.pendingQ = 0;
   });
+  await t('F6 duel: two players on a stub channel play 5 rounds, wrong answers cost, winner paid', async () => {
+    g.mode = 'WORLD';
+    const A = new Duel(g), B = new Duel(g); // both drive the same page's DOM, so test the logic via state, not DOM
+    const mk = (me, other) => ({ readyState: 'open', send(m) { setTimeout(() => other.onmessage({ data: m }), 0); } });
+    const chA = mk(A, B), chB = mk(B, A);
+    A.role = 'host'; B.role = 'join';
+    chA.onmessage = null; chB.onmessage = null;
+    A.ch = chA; B.ch = chB;
+    chA.send = m => setTimeout(() => B.onMsg(JSON.parse(m)), 0);
+    chB.send = m => setTimeout(() => A.onMsg(JSON.parse(m)), 0);
+    A.send({ t: 'hello', name: 'Alice' }); B.send({ t: 'hello', name: 'Bob' });
+    await sleep(20);
+    assert(A.oppName === 'Bob' && B.oppName === 'Alice', 'hello names');
+    const rounds = Array.from({ length: 5 }, (_, k) => ({ kind: ALL_KINDS[k], tier: 2, seed: 100 + k }));
+    assert(JSON.stringify(buildChallenge(rounds[0]).choices) === JSON.stringify(buildChallenge(rounds[0]).choices), 'same seed => same choices');
+    // simulate results directly: A always right and faster, B always wrong
+    A.rounds = B.rounds = rounds; A.me = A.opp = B.me = B.opp = 0;
+    for (let i = 0; i < 5; i++) {
+      A.i = B.i = i; A.mine = { ok: true, ms: 1000 }; B.mine = { ok: false, ms: 2000 };
+      A.theirs = B.mine; B.theirs = A.mine; A.maybeResolve(); B.maybeResolve();
+    }
+    assert(A.me === 75 && A.opp === -75 && B.me === -75 && B.opp === 75, `scoring ${A.me}/${A.opp}`);
+    const c0 = g.state.coins; A.me = 75; A.opp = -75; A.finish();
+    assert(g.state.coins === c0 + 100 && /WIN/.test($('duelResult').textContent), 'winner paid');
+    $('duelOverlay').classList.add('hidden');
+  });
   await t('F5 voxel world: 10,000 dragons, foods, endless dimensions', () => {
     assert(DRAGON_TOTAL === 10000 && getDragon('x9999').id === 'x9999' && getDragon('x5000').name === getDragon('x5000').name, 'dragons');
     assert(!isDragonId('x10000') && !isDragonId('zzz'), 'invalid ids');
@@ -280,17 +306,19 @@ window.addEventListener('load', async () => {
   });
 
   // ------------------------------------------------------------- leveling, badges, feeding, menus
+  g.closeForge(); g.nextForgeAt = performance.now() + 1e9; g.hero.x = g.hero.targetX = 0; g.hero.y = g.hero.targetY = 0; // stand clear of the objective so no question pops up mid-menu test
   await t('G1 level-up gives a toast and coin bonus', () => {
     const lvl = g.state.level, coins = g.state.coins;
     g.gainXP(100000);
     assert(g.state.level > lvl && g.state.coins > coins, 'level-up not applied');
     assert(document.querySelectorAll('#toastLayer .toast').length > 0, 'no toast');
   });
+  g.closeForge();
   await t('G2 feeding a dragon costs coins and levels it', () => {
     g.state.coins = 500;
     g.state.dragonLevels.ignis = { lvl: 2, xp: 10 }; // earlier tests may have maxed it out
     g.openMenu('dragons');
-    assert(vis('menuOverlay'), 'menu closed');
+    assert(vis('menuOverlay'), 'menu closed: mode=' + g.mode + ' open=' + [...document.querySelectorAll('.overlay-screen:not(.hidden)')].map(e => e.id));
     const before = JSON.stringify(g.dragonInfo('ignis'));
     const feed = document.querySelector('.mini-btn.feed[data-id="ignis"]');
     assert(feed && !feed.disabled, 'feed button missing');

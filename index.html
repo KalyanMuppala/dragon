@@ -75,6 +75,7 @@
     <button class="side-btn" data-tab="dragons" aria-label="Dragon book">📖<span>Dragons</span></button>
     <button class="side-btn" data-tab="food" aria-label="Taming food">🍖<span>Food</span></button>
     <button class="side-btn" data-tab="islands" aria-label="Island map">🗺️<span>Islands</span></button>
+    <button id="btnDuel" class="side-btn" aria-label="Duel a friend">⚔️<span>Duel</span></button>
     <button class="side-btn" data-tab="badges" aria-label="Badges">🏆<span>Badges</span></button>
   </div>
 
@@ -169,6 +170,40 @@
     </div>
   </div>
 
+  <!-- FRIEND DUEL (2 players, direct connection, no server) -->
+  <div id="duelOverlay" class="overlay-screen hidden">
+    <div class="spellforge-card duel-card">
+      <button id="duelClose" class="menu-close" aria-label="Close" style="position:absolute;top:10px;right:10px;">✖</button>
+      <h2 style="color:var(--gold);font-weight:900;">⚔️ DUEL A FRIEND</h2>
+      <p id="duelStatus" style="color:#b8c7f0;font-weight:800;margin:6px 0 10px;"></p>
+      <div id="duelLobby">
+        <button id="duelHost" class="btn-play-giant">🏠 HOST A DUEL</button>
+        <button id="duelJoin" class="btn-play-giant" style="margin-top:10px;background:linear-gradient(#4cc9f0,#1b8fd6);">🔗 JOIN A FRIEND</button>
+        <p style="color:#8a9bd0;font-size:0.8rem;margin-top:10px;">Private: no strangers, no accounts. You swap a code with a friend you know by text message.</p>
+      </div>
+      <div id="duelCode" class="hidden">
+        <textarea id="duelCodeBox" class="duel-box" readonly rows="3" placeholder="Your code appears here"></textarea>
+        <button id="duelCopy" class="mini-btn gold">📋 Copy code</button>
+        <div id="duelPasteRow"><textarea id="duelPaste" class="duel-box" rows="3" placeholder="Paste your friend's code here"></textarea></div>
+        <button id="duelAccept" class="mini-btn gold">🔌 Connect</button>
+        <button id="duelStart" class="btn-play-giant hidden" style="margin-top:10px;">▶ START DUEL</button>
+      </div>
+      <div id="duelPlay" class="hidden">
+        <div id="duelRound" style="font-weight:900;color:#b8c7f0;"></div>
+        <div id="duelScore" style="font-weight:900;font-size:1.2rem;color:var(--gold);margin:4px 0 8px;"></div>
+        <div id="duelPrompt" class="forge-prompt"></div>
+        <canvas id="duelCanvas" width="540" height="150" style="max-width:100%;"></canvas>
+        <div id="duelTip" class="forge-helper-tip ok" style="min-height:1.5em;"></div>
+        <div id="duelChoices" class="rune-choices-row"></div>
+      </div>
+      <div id="duelEnd" class="hidden">
+        <h1 id="duelResult" style="color:var(--gold);font-weight:900;"></h1>
+        <h2 id="duelFinal" style="color:#fff;"></h2>
+        <button class="mini-btn" onclick="game.duel.close()">Back to the game</button>
+      </div>
+    </div>
+  </div>
+
   <!-- TAMING: pick a food to feed the wild dragon -->
   <div id="foodOverlay" class="overlay-screen hidden">
     <div class="spellforge-card food-card">
@@ -243,6 +278,7 @@
   <script src="questions.js?v=__V__"></script>
   <script src="voxel.js?v=__V__"></script>
   <script src="game.js?v=__V__"></script>
+  <script src="duel.js?v=__V__"></script>
   <script src="parent.js?v=__V__"></script>
   <script>
     // Offline support (only over https / localhost). Failure is harmless: the game still works online.

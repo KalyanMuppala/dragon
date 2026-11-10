@@ -471,6 +471,7 @@ class DragonCraftWorld {
       if (document.visibilityState === 'hidden') this.pauseQuestionClock('hidden'); else this.resumeQuestionClock('hidden');
     });
     this.bindEvents();
+    this.duel = typeof Duel === 'function' ? new Duel(this) : null;
     this.announceDimension();
     if (this.state.pendingQ) { // the game was closed in the middle of a question: that counts as a miss
       this.state.pendingQ = 0;
@@ -1088,7 +1089,7 @@ class DragonCraftWorld {
   bindEvents() {
     this.bindParentEvents(); // parent dashboard, time limits (parent.js)
     // ---- Side menu (Hero / Dragon Book / Islands) ----
-    document.querySelectorAll('.side-btn').forEach(b => b.addEventListener('click', () => { sfx.init(); sfx.coin(); this.openMenu(b.dataset.tab); }));
+    document.querySelectorAll('.side-btn[data-tab]').forEach(b => b.addEventListener('click', () => { sfx.init(); sfx.coin(); this.openMenu(b.dataset.tab); }));
     document.querySelectorAll('.menu-tab').forEach(b => b.addEventListener('click', () => { this.menuTab = b.dataset.tab; sfx.coin(); this.renderMenu(); }));
     document.getElementById('menuClose').addEventListener('click', () => this.closeMenu());
     // 1-Click Play Button
@@ -1631,6 +1632,7 @@ class DragonCraftWorld {
     if (!document.getElementById('spellForgeOverlay').classList.contains('hidden')) return;
     if (!document.getElementById('chestOverlay').classList.contains('hidden')) return;
     if (!document.getElementById('menuOverlay').classList.contains('hidden')) return;
+    if (!document.getElementById('duelOverlay').classList.contains('hidden')) return;
     if (!document.getElementById('lockOverlay').classList.contains('hidden')) return;
     if (!document.getElementById('tutorialOverlay').classList.contains('hidden')) return;
     if (!document.getElementById('titleOverlay').classList.contains('hidden')) return;
@@ -1841,7 +1843,7 @@ class DragonCraftWorld {
       over: false,
       isBoss,
       tame: 0,
-      tameNeed: rarityInfo(enemyDragon).need + (isBoss ? 20 : 0),
+      tameNeed: 50,
       lastFood: ''
     };
 
@@ -2058,16 +2060,27 @@ class DragonCraftWorld {
   // Wrong answers cost something real. Saved immediately, so closing the game can't undo it.
   applyPenalty() {
     const st = this.state;
-    const lossC = Math.min(st.coins, 20);
-    const lossX = Math.min(st.xp, 15);
+    // Guessing and spamming must NOT pay off: every miss in a row hurts more (x1 .. x3)
+    const mult = 1 + 0.5 * Math.min(4, this.missStreak || 0);
+    this.missStreak = (this.missStreak || 0) + 1;
+    const lossC = Math.min(st.coins, Math.round(Math.max(60, st.coins * 0.2) * mult));
     st.coins -= lossC;
-    st.xp -= lossX;
+    let rem = Math.round(60 * mult);
+    const want = rem;
+    while (rem > 0) { // XP drains, and can even knock you down a level
+      if (st.xp >= rem) { st.xp -= rem; rem = 0; }
+      else {
+        rem -= st.xp; st.xp = 0;
+        if (st.level > 1) { st.level--; st.xpNext = Math.max(100, Math.round(st.xpNext / 1.25)); st.xp = st.xpNext; } else break;
+      }
+    }
+    const lossX = want - rem;
     const id = this.leadDragonId();
     const dl = st.dragonLevels && st.dragonLevels[id];
     let lossD = 0;
-    if (dl && dl.lvl < 10) { lossD = Math.min(dl.xp, 10); dl.xp -= lossD; }
+    if (dl && dl.lvl < 10) { lossD = Math.min(dl.xp, 40); dl.xp -= lossD; }
     st.stats.penalties = (st.stats.penalties || 0) + 1;
-    st.streak = 1;
+    st.streak = 1; st.run = 0;
     return { lossC, lossX, lossD };
   }
 
@@ -2085,6 +2098,7 @@ class DragonCraftWorld {
     if (ok) {
       btn.classList.add('correct');
       this.qWrong = 0;
+      this.missStreak = 0;
       this.recordAnswer(false);
       sfx.spellCharge();
       this.state.streak++;
@@ -2121,12 +2135,12 @@ class DragonCraftWorld {
     const inBattle = this.mode === 'BATTLE' && b;
     if (inBattle) {
       b.busy = true; this.updateDock();
-      b.heroHp = Math.max(0, b.heroHp - 15);
+      b.heroHp = Math.max(0, b.heroHp - 25);
       b.enemyAnim = 28;
       b.heroFlash = 14;
-      if (this.pendingAction === 'TAME') b.tame = Math.max(0, b.tame - 20);
+      if (this.pendingAction === 'TAME') b.tame = Math.max(0, b.tame - 30);
       this.triggerScreenShake(8, 10);
-      this.spawnFloatText(this.vw * 0.27, this.vh * 0.62 - 80, '💥 -15 HP', '#ef476f');
+      this.spawnFloatText(this.vw * 0.27, this.vh * 0.62 - 80, '💥 -25 HP', '#ef476f');
     }
     setTimeout(() => {
       this.closeForge();
@@ -2244,7 +2258,7 @@ class DragonCraftWorld {
     if (this.pendingAction === 'TAME') {
       const enemyId = b.enemy.id;
       const m = foodMatch(b.enemy, this.tameFood);
-      const gain = m === 2 ? 45 : m === 1 ? 25 : 8;
+      const gain = m === 2 ? 25 : m === 1 ? 15 : 5;
       b.tame = Math.min(b.tameNeed, b.tame + gain);
       const verdict = m === 2 ? '😍 FAVOURITE!' : m === 1 ? '🙂 Tasty!' : '😐 Meh...';
       this.spawnFloatText(rightX, platY - 90, `${verdict} +${gain} trust`, m === 2 ? '#00f5d4' : '#ffd166');

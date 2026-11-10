@@ -74,11 +74,11 @@ const D_SYL = ['Zar', 'Kor', 'Vel', 'Mor', 'Thal', 'Ign', 'Sky', 'Bor', 'Nyx', '
 const D_END = ['ix', 'on', 'ar', 'us', 'ith', 'or', 'ax', 'is', 'eth', 'oth', 'yn', 'ak', 'ul', 'ira'];
 const D_SPECIES = ['Drake', 'Wyvern', 'Wyrm', 'Dragon', 'Serpent', 'Hydra', 'Behemoth', 'Phantom', 'Guardian', 'Stalker'];
 const RARITIES = [
-  { id: 'common', name: 'Common', color: '#9fb3c8', need: 100, hp: 1 },
-  { id: 'rare', name: 'Rare', color: '#4cc9f0', need: 120, hp: 1.15 },
-  { id: 'epic', name: 'Epic', color: '#c77dff', need: 150, hp: 1.35 },
-  { id: 'legendary', name: 'Legendary', color: '#ffd166', need: 190, hp: 1.6 },
-  { id: 'mythic', name: 'Mythic', color: '#ff5d8f', need: 240, hp: 2 }
+  { id: 'common', name: 'Common', color: '#9fb3c8', need: 50, hp: 1 },
+  { id: 'rare', name: 'Rare', color: '#4cc9f0', need: 50, hp: 1.15 },
+  { id: 'epic', name: 'Epic', color: '#c77dff', need: 50, hp: 1.35 },
+  { id: 'legendary', name: 'Legendary', color: '#ffd166', need: 50, hp: 1.6 },
+  { id: 'mythic', name: 'Mythic', color: '#ff5d8f', need: 50, hp: 2 }
 ];
 function rarityOf(r) {
   return r < 0.58 ? 0 : r < 0.84 ? 1 : r < 0.95 ? 2 : r < 0.99 ? 3 : 4;
